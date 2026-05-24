@@ -49,7 +49,12 @@
         onchange="showFileName(this)"
       />
 
-      <!-- Inline error -->
+      <!-- Inline error (server-side) -->
+      {% if error %}
+      <p class="text-red-600 text-sm font-medium bg-red-50 border border-red-200 rounded-lg px-4 py-3">{{ error }}</p>
+      {% endif %}
+
+      <!-- Inline error (client-side) -->
       <p id="file-error" class="text-red-600 text-sm hidden"></p>
 
       <!-- Mode selector -->
