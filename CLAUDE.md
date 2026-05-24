@@ -79,6 +79,50 @@ Via file extension scan. Prompt adjusts per detected language (Python, JS, TS, J
 - FastAPI `UploadFile` → saves to `/tmp/` → extracts with `zipfile`
 - No third-party upload libraries (FilePond/Uppy deferred)
 
+## Project Structure
+
+```
+hackathon-ai-builders/
+├── main.py                    # FastAPI app — all routes live here
+├── scanner.py                 # File scanner + section→file mapping (Issue 3)
+├── generator.py               # DeepSeek streaming + skeleton extraction (Issues 4, 5, 8)
+├── requirements.txt
+├── pytest.ini
+├── .gitignore
+├── .env                       # DEEPSEEK_API_KEY (never committed)
+│
+├── templates/                 # Jinja2 HTML templates
+│   ├── upload.html            # Upload page (Issue 1) ✓
+│   ├── generate.html          # Generation progress / SSE stream (Issues 4, 5)
+│   └── preview.html           # Preview + edit + download (Issue 6)
+│
+├── static/                    # Static assets (CSS overrides, icons if needed)
+│
+├── samples/
+│   └── todo-app/              # Bundled sample FastAPI project (Issue 9)
+│
+├── tests/
+│   ├── test_upload_page.py    # Issue 1 ✓
+│   ├── test_upload_endpoint.py # Issue 2
+│   ├── test_scanner.py        # Issue 3
+│   ├── test_generator.py      # Issues 4, 5
+│   └── test_edit.py           # Issues 7, 8
+│
+└── docs/                      # All documentation — never import from here
+    ├── PRD.md
+    ├── PS.md
+    ├── rules.md
+    ├── whammy-docs-handoff.md
+    ├── agents/                # Agent skill configs
+    └── issues/                # Issue spec files (01–10)
+```
+
+### Conventions
+- All routes stay in `main.py` (no routers sub-package — app is small enough)
+- Business logic goes in `scanner.py` or `generator.py`, not inline in routes
+- Every new module gets a matching test file in `tests/`
+- Session data lives in `/tmp/whammy-<session_id>/` — no DB, no global state
+
 ## Key Constraints
 
 - No user accounts or persistent storage — everything is session/tmp-based
