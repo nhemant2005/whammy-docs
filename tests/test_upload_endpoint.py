@@ -89,6 +89,17 @@ def test_corrupted_zip_returns_error_not_500():
     assert "error" in response.text.lower() or "invalid" in response.text.lower()
 
 
+def test_valid_zip_writes_mapping_json(tmp_path, monkeypatch):
+    monkeypatch.setenv("WHAMMY_TMP_DIR", str(tmp_path))
+    data = {"file": ("project.zip", make_zip({"main.py": "x = 1"}), "application/zip"), "mode": (None, "quick")}
+    response = client.post("/upload", files=data)
+    assert response.status_code == 303
+
+    session_id = response.headers["location"].split("/generate/")[1]
+    mapping_file = tmp_path / f"whammy-{session_id}" / "mapping.json"
+    assert mapping_file.exists()
+
+
 def test_password_protected_zip_returns_error_not_500():
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:

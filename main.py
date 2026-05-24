@@ -8,6 +8,8 @@ from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from scanner import scan
+
 app = FastAPI(title="WhammyDocs")
 templates = Jinja2Templates(directory="templates")
 
@@ -56,5 +58,7 @@ async def upload(
     (session_dir / "session.json").write_text(
         json.dumps({"session_id": session_id, "mode": mode})
     )
+
+    scan(session_dir)
 
     return RedirectResponse(url=f"/generate/{session_id}", status_code=303)
