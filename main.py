@@ -6,10 +6,11 @@ import zipfile
 from pathlib import Path
 
 from fastapi import FastAPI, Request, UploadFile, File, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from scanner import scan
+from generator import stream_readme
 
 app = FastAPI(title="WhammyDocs")
 templates = Jinja2Templates(directory="templates")
@@ -63,3 +64,31 @@ async def upload(
     scan(session_dir)
 
     return RedirectResponse(url=f"/generate/{session_id}", status_code=303)
+
+
+@app.get("/generate/{session_id}", response_class=HTMLResponse)
+async def generate_page(request: Request, session_id: str):
+    session_dir = _tmp_dir() / f"whammy-{session_id}"
+    if not session_dir.exists():
+        return HTMLResponse("Session not found", status_code=404)
+    return templates.TemplateResponse(
+        request, "generate.html", {"session_id": session_id}
+    )
+
+
+@app.get("/stream/{session_id}")
+async def stream(session_id: str):
+    session_dir = _tmp_dir() / f"whammy-{session_id}"
+    if not session_dir.exists():
+        return HTMLResponse("Session not found", status_code=404)
+
+    async def event_generator():
+        async for token in stream_readme(session_dir):
+            yield f"data: {token}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

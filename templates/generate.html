@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhammyDocs — Generating…</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/sse.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="min-h-screen bg-gray-50">
+
+  <div class="max-w-3xl mx-auto px-4 py-12">
+
+    <!-- Header -->
+    <div class="mb-8">
+      <a href="/" class="text-sm text-indigo-600 hover:underline">&larr; Back</a>
+      <h1 class="mt-4 text-3xl font-bold text-gray-900">Generating your docs…</h1>
+      <p class="mt-2 text-gray-500">README is streaming below. More sections coming next.</p>
+    </div>
+
+    <!-- README section card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4">
+
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">README</h2>
+        <span id="status-badge" class="text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+          Generating…
+        </span>
+      </div>
+
+      <!-- SSE target: raw markdown accumulates here (hidden) -->
+      <div
+        id="readme-raw"
+        hx-ext="sse"
+        sse-connect="/stream/{{ session_id }}"
+        sse-swap="message"
+        hx-swap="beforeend"
+        class="hidden"
+      ></div>
+
+      <!-- Rendered preview -->
+      <div id="readme-preview" class="prose prose-sm max-w-none text-gray-700 min-h-[6rem]">
+        <div class="animate-pulse flex space-x-2 items-center text-gray-400">
+          <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span class="text-sm">Waiting for tokens…</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    const rawEl = document.getElementById('readme-raw');
+    const previewEl = document.getElementById('readme-preview');
+    const badge = document.getElementById('status-badge');
+
+    // Re-render preview whenever the raw div changes
+    const observer = new MutationObserver(() => {
+      const md = rawEl.textContent;
+      if (md.includes('[DONE]')) {
+        const clean = md.replace('[DONE]', '').trim();
+        previewEl.innerHTML = marked.parse(clean);
+        badge.textContent = 'Done';
+        badge.className = 'text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700';
+      } else {
+        previewEl.innerHTML = marked.parse(md);
+      }
+    });
+    observer.observe(rawEl, { childList: true, subtree: true, characterData: true });
+  </script>
+
+</body>
+</html>
