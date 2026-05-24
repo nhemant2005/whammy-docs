@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 import uuid
 import zipfile
 from pathlib import Path
@@ -17,7 +18,7 @@ _50MB = 50 * 1024 * 1024
 
 
 def _tmp_dir() -> Path:
-    return Path(os.environ.get("WHAMMY_TMP_DIR", "/tmp"))
+    return Path(os.environ.get("WHAMMY_TMP_DIR", tempfile.gettempdir()))
 
 
 def _error(request: Request, message: str):
