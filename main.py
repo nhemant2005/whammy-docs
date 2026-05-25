@@ -1,16 +1,37 @@
+import io
 import json
 import os
+import subprocess
 import tempfile
 import uuid
 import zipfile
 from pathlib import Path
 
 from fastapi import FastAPI, Request, UploadFile, File, Form
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from scanner import scan
 from generator import stream_readme, stream_all_sections
+
+_QUICK_SECTION_KEYS = ["readme", "api_reference"]
+_COMPREHENSIVE_SECTION_KEYS = [
+    "readme", "api_reference", "architecture", "getting_started", "deployment"
+]
+_SECTION_TITLES = {
+    "readme": "README",
+    "api_reference": "API Reference",
+    "architecture": "Architecture",
+    "getting_started": "Getting Started",
+    "deployment": "Deployment",
+}
+_MKDOCS_NAV_TITLES = {
+    "readme": "README",
+    "api_reference": "API Reference",
+    "architecture": "Architecture",
+    "getting_started": "Getting Started",
+    "deployment": "Deployment",
+}
 
 app = FastAPI(title="WhammyDocs")
 templates = Jinja2Templates(directory="templates")
@@ -95,4 +116,81 @@ async def stream(session_id: str):
         event_generator(),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.get("/preview/{session_id}", response_class=HTMLResponse)
+async def preview_page(request: Request, session_id: str):
+    session_dir = _tmp_dir() / f"whammy-{session_id}"
+    if not session_dir.exists():
+        return HTMLResponse("Session not found", status_code=404)
+
+    session = json.loads((session_dir / "session.json").read_text(encoding="utf-8"))
+    mode = session.get("mode", "comprehensive")
+    section_keys = _QUICK_SECTION_KEYS if mode == "quick" else _COMPREHENSIVE_SECTION_KEYS
+
+    sections = []
+    docs_dir = session_dir / "docs"
+    for key in section_keys:
+        doc_file = docs_dir / f"{key}.md"
+        if doc_file.exists():
+            sections.append({
+                "key": key,
+                "id": f"section-{key.replace('_', '-')}",
+                "title": _SECTION_TITLES[key],
+                "content": doc_file.read_text(encoding="utf-8"),
+            })
+
+    return templates.TemplateResponse(
+        request, "preview.html", {"session_id": session_id, "sections": sections}
+    )
+
+
+@app.get("/download/{session_id}")
+async def download(session_id: str):
+    session_dir = _tmp_dir() / f"whammy-{session_id}"
+    if not session_dir.exists():
+        return HTMLResponse("Session not found", status_code=404)
+
+    docs_dir = session_dir / "docs"
+    site_dir = session_dir / "site"
+
+    # Build mkdocs.yml dynamically from generated sections
+    nav_entries = []
+    for key in _COMPREHENSIVE_SECTION_KEYS:
+        doc_file = docs_dir / f"{key}.md"
+        if doc_file.exists():
+            nav_entries.append(f"  - {_MKDOCS_NAV_TITLES[key]}: {key}.md")
+
+    mkdocs_yml = session_dir / "mkdocs.yml"
+    mkdocs_yml.write_text(
+        "site_name: Project Documentation\n"
+        "theme:\n  name: material\n"
+        f"docs_dir: {docs_dir.as_posix()}\n"
+        f"site_dir: {site_dir.as_posix()}\n"
+        "nav:\n" + "\n".join(nav_entries) + "\n",
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        ["mkdocs", "build", "--config-file", str(mkdocs_yml)],
+        capture_output=True,
+        check=False,
+    )
+
+    # Zip site/ + docs/*.md
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        if site_dir.exists():
+            for f in site_dir.rglob("*"):
+                if f.is_file():
+                    zf.write(f, f"site/{f.relative_to(site_dir).as_posix()}")
+        for f in docs_dir.glob("*.md"):
+            zf.write(f, f"docs/{f.name}")
+    buf.seek(0)
+
+    return Response(
+        content=buf.read(),
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=docs.zip"},
     )
