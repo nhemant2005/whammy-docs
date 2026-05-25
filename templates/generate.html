@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WhammyDocs — Generating…</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/sse.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body class="min-h-screen bg-gray-50">
@@ -15,64 +13,144 @@
 
     <!-- Header -->
     <div class="mb-8">
-      <a href="/" class="text-sm text-indigo-600 hover:underline">&larr; Back</a>
+      <a href="/" class="text-sm text-indigo-600 hover:underline">&larr; Start over</a>
       <h1 class="mt-4 text-3xl font-bold text-gray-900">Generating your docs…</h1>
-      <p class="mt-2 text-gray-500">README is streaming below. More sections coming next.</p>
+      <p id="status-text" class="mt-2 text-gray-500">Connecting to generation stream…</p>
     </div>
 
-    <!-- README section card -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4">
+    <!-- Overall progress bar -->
+    <div class="w-full bg-gray-200 rounded-full h-2 mb-8">
+      <div id="progress-bar" class="bg-indigo-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+    </div>
 
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-900">README</h2>
-        <span id="status-badge" class="text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
-          Generating…
-        </span>
-      </div>
+    <!-- Section cards container -->
+    <div id="sections-container" class="space-y-4"></div>
 
-      <!-- SSE target: raw markdown accumulates here (hidden) -->
-      <div
-        id="readme-raw"
-        hx-ext="sse"
-        sse-connect="/stream/{{ session_id }}"
-        sse-swap="message"
-        hx-swap="beforeend"
-        class="hidden"
-      ></div>
-
-      <!-- Rendered preview -->
-      <div id="readme-preview" class="prose prose-sm max-w-none text-gray-700 min-h-[6rem]">
-        <div class="animate-pulse flex space-x-2 items-center text-gray-400">
-          <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-          </svg>
-          <span class="text-sm">Waiting for tokens…</span>
+    <!-- Error banner (hidden by default) -->
+    <div id="error-banner" class="hidden mt-6 bg-red-50 border border-red-200 rounded-xl p-4">
+      <div class="flex items-start gap-3">
+        <svg class="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-red-800">Generation error</p>
+          <p id="error-message" class="text-sm text-red-600 mt-1"></p>
         </div>
+        <a href="/" class="text-sm text-red-700 font-medium hover:underline">Retry</a>
       </div>
-
     </div>
 
   </div>
 
   <script>
-    const rawEl = document.getElementById('readme-raw');
-    const previewEl = document.getElementById('readme-preview');
-    const badge = document.getElementById('status-badge');
+    const SESSION_ID = "{{ session_id }}";
+    const SECTION_TITLES = {
+      readme: "README",
+      api_reference: "API Reference",
+      architecture: "Architecture",
+      getting_started: "Getting Started",
+      deployment: "Deployment",
+    };
+    const ALL_SECTIONS = ["readme", "api_reference", "architecture", "getting_started", "deployment"];
 
-    // Re-render preview whenever the raw div changes
-    const observer = new MutationObserver(() => {
-      const md = rawEl.textContent;
-      if (md.includes('[DONE]')) {
-        const clean = md.replace('[DONE]', '').trim();
-        previewEl.innerHTML = marked.parse(clean);
-        badge.textContent = 'Done';
-        badge.className = 'text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700';
-      } else {
-        previewEl.innerHTML = marked.parse(md);
+    let currentSection = null;
+    let sectionBuffers = {};
+    let completedCount = 0;
+    let totalSections = 0;
+
+    const container = document.getElementById("sections-container");
+    const progressBar = document.getElementById("progress-bar");
+    const statusText = document.getElementById("status-text");
+    const errorBanner = document.getElementById("error-banner");
+    const errorMessage = document.getElementById("error-message");
+
+    function createSectionCard(key) {
+      const title = SECTION_TITLES[key] || key;
+      const card = document.createElement("div");
+      card.id = `card-${key}`;
+      card.className = "bg-white rounded-2xl shadow-sm border border-gray-200 p-6";
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-gray-900">${title}</h2>
+          <span id="badge-${key}" class="text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+            Generating…
+          </span>
+        </div>
+        <div id="preview-${key}" class="prose prose-sm max-w-none text-gray-700 min-h-[4rem]">
+          <div class="animate-pulse flex items-center gap-2 text-gray-400">
+            <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            <span class="text-sm">Waiting for tokens…</span>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    }
+
+    function markSectionDone(key) {
+      const badge = document.getElementById(`badge-${key}`);
+      if (badge) {
+        badge.textContent = "Done";
+        badge.className = "text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700";
       }
+      completedCount++;
+      if (totalSections > 0) {
+        progressBar.style.width = `${Math.round((completedCount / totalSections) * 100)}%`;
+      }
+    }
+
+    function renderSection(key) {
+      const preview = document.getElementById(`preview-${key}`);
+      if (preview && sectionBuffers[key] !== undefined) {
+        preview.innerHTML = marked.parse(sectionBuffers[key]);
+      }
+    }
+
+    const es = new EventSource(`/stream/${SESSION_ID}`);
+
+    es.addEventListener("section-start", (e) => {
+      const key = e.data.trim();
+      currentSection = key;
+      totalSections++;
+      sectionBuffers[key] = "";
+      statusText.textContent = `Generating ${SECTION_TITLES[key] || key}…`;
+      createSectionCard(key);
     });
-    observer.observe(rawEl, { childList: true, subtree: true, characterData: true });
+
+    es.addEventListener("message", (e) => {
+      if (!currentSection) return;
+      sectionBuffers[currentSection] += e.data;
+      renderSection(currentSection);
+    });
+
+    es.addEventListener("section-complete", (e) => {
+      const key = e.data.trim();
+      renderSection(key);
+      markSectionDone(key);
+    });
+
+    es.addEventListener("done", () => {
+      es.close();
+      progressBar.style.width = "100%";
+      statusText.textContent = "All sections generated! Redirecting to preview…";
+      setTimeout(() => {
+        window.location.href = `/preview/${SESSION_ID}`;
+      }, 800);
+    });
+
+    es.addEventListener("gen-error", (e) => {
+      errorBanner.classList.remove("hidden");
+      errorMessage.textContent = e.data;
+    });
+
+    es.onerror = () => {
+      es.close();
+      errorBanner.classList.remove("hidden");
+      errorMessage.textContent = "Connection to generation stream lost.";
+    };
   </script>
 
 </body>

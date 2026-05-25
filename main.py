@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from scanner import scan
-from generator import stream_readme
+from generator import stream_readme, stream_all_sections
 
 app = FastAPI(title="WhammyDocs")
 templates = Jinja2Templates(directory="templates")
@@ -83,9 +83,13 @@ async def stream(session_id: str):
         return HTMLResponse("Session not found", status_code=404)
 
     async def event_generator():
-        async for token in stream_readme(session_dir):
-            yield f"data: {token}\n\n"
-        yield "data: [DONE]\n\n"
+        async for event_type, data in stream_all_sections(session_dir):
+            if event_type == "message":
+                # Plain data: line (unnamed = "message" event in SSE)
+                yield f"data: {data}\n\n"
+            else:
+                # Named event
+                yield f"event: {event_type}\ndata: {data}\n\n"
 
     return StreamingResponse(
         event_generator(),

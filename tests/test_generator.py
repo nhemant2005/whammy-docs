@@ -34,9 +34,12 @@ def _make_session(tmp_path: Path, mapping: dict = None) -> tuple[str, Path]:
     return session_id, session_dir
 
 
-async def _fake_stream(session_dir):
-    yield "Hello"
-    yield " world"
+async def _fake_stream_all(session_dir):
+    yield ("section-start", "readme")
+    yield ("message", "Hello")
+    yield ("message", " world")
+    yield ("section-complete", "readme")
+    yield ("done", "")
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +51,7 @@ def test_stream_endpoint_returns_event_stream_content_type(tmp_path, monkeypatch
     monkeypatch.setenv("WHAMMY_TMP_DIR", str(tmp_path))
     session_id, _ = _make_session(tmp_path)
 
-    with patch("main.stream_readme", _fake_stream):
+    with patch("main.stream_all_sections", _fake_stream_all):
         response = client.get(f"/stream/{session_id}")
 
     assert response.status_code == 200
@@ -64,7 +67,7 @@ def test_stream_response_wraps_tokens_as_data_events(tmp_path, monkeypatch):
     monkeypatch.setenv("WHAMMY_TMP_DIR", str(tmp_path))
     session_id, _ = _make_session(tmp_path)
 
-    with patch("main.stream_readme", _fake_stream):
+    with patch("main.stream_all_sections", _fake_stream_all):
         response = client.get(f"/stream/{session_id}")
 
     lines = [l for l in response.text.splitlines() if l.strip()]
@@ -92,14 +95,14 @@ def test_generate_page_returns_html(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_generate_page_includes_sse_connect_for_session(tmp_path, monkeypatch):
+def test_generate_page_includes_event_source_for_session(tmp_path, monkeypatch):
     monkeypatch.setenv("WHAMMY_TMP_DIR", str(tmp_path))
     session_id, _ = _make_session(tmp_path)
 
     response = client.get(f"/generate/{session_id}")
 
     assert f"/stream/{session_id}" in response.text
-    assert "sse-connect" in response.text
+    assert "EventSource" in response.text
 
 
 # ---------------------------------------------------------------------------
