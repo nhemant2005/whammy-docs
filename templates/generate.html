@@ -45,6 +45,8 @@
 
   <script>
     const SESSION_ID = "{{ session_id }}";
+    const MODE = "{{ mode }}";
+    const KNOWN_TOTAL = MODE === "quick" ? 2 : 5;
     const SECTION_TITLES = {
       readme: "README",
       api_reference: "API Reference",
@@ -57,7 +59,6 @@
     let currentSection = null;
     let sectionBuffers = {};
     let completedCount = 0;
-    let totalSections = 0;
 
     const container = document.getElementById("sections-container");
     const progressBar = document.getElementById("progress-bar");
@@ -116,9 +117,7 @@
         badge.className = "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700";
       }
       completedCount++;
-      if (totalSections > 0) {
-        progressBar.style.width = `${Math.round((completedCount / totalSections) * 100)}%`;
-      }
+      progressBar.style.width = `${Math.round((completedCount / KNOWN_TOTAL) * 100)}%`;
     }
 
     function renderSection(key) {
@@ -133,9 +132,8 @@
     es.addEventListener("section-start", (e) => {
       const key = e.data.trim();
       currentSection = key;
-      totalSections++;
       sectionBuffers[key] = "";
-      statusText.textContent = `Generating ${SECTION_TITLES[key] || key}… (section ${totalSections})`;
+      statusText.textContent = `Generating ${SECTION_TITLES[key] || key}… (section ${completedCount + 1} of ${KNOWN_TOTAL})`;
       createSectionCard(key);
     });
 

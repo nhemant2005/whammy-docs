@@ -122,8 +122,10 @@ async def generate_page(request: Request, session_id: str):
     session_dir = _tmp_dir() / f"whammy-{session_id}"
     if not session_dir.exists():
         return HTMLResponse("Session not found", status_code=404)
+    session_data = json.loads((session_dir / "session.json").read_text())
+    mode = session_data.get("mode", "comprehensive")
     return templates.TemplateResponse(
-        request, "generate.html", {"session_id": session_id}
+        request, "generate.html", {"session_id": session_id, "mode": mode}
     )
 
 
