@@ -25,11 +25,11 @@ def make_zip(files: dict[str, str] = None) -> bytes:
 # Tracer bullet: valid zip → redirect
 # ---------------------------------------------------------------------------
 
-def test_valid_zip_redirects_to_generate():
+def test_valid_zip_redirects_to_preview():
     data = {"file": ("project.zip", make_zip(), "application/zip"), "mode": (None, "quick")}
     response = client.post("/upload", files=data)
     assert response.status_code == 303
-    assert response.headers["location"].startswith("/generate/")
+    assert response.headers["location"].startswith("/preview/")
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ def test_valid_zip_creates_session_directory(tmp_path, monkeypatch):
     assert response.status_code == 303
 
     location = response.headers["location"]
-    session_id = location.split("/generate/")[1]
+    session_id = location.split("/preview/")[1]
     session_dir = tmp_path / f"whammy-{session_id}"
     assert session_dir.is_dir()
     assert (session_dir / "src" / "main.py").exists()
@@ -55,7 +55,7 @@ def test_valid_zip_writes_session_json(tmp_path, monkeypatch):
     response = client.post("/upload", files=data)
     assert response.status_code == 303
 
-    session_id = response.headers["location"].split("/generate/")[1]
+    session_id = response.headers["location"].split("/preview/")[1]
     session_json = tmp_path / f"whammy-{session_id}" / "session.json"
     assert session_json.exists()
     payload = json.loads(session_json.read_text())
@@ -95,7 +95,7 @@ def test_valid_zip_writes_mapping_json(tmp_path, monkeypatch):
     response = client.post("/upload", files=data)
     assert response.status_code == 303
 
-    session_id = response.headers["location"].split("/generate/")[1]
+    session_id = response.headers["location"].split("/preview/")[1]
     mapping_file = tmp_path / f"whammy-{session_id}" / "mapping.json"
     assert mapping_file.exists()
 

@@ -20,3 +20,9 @@ Extend the SSE stream to generate all sections sequentially. Read `mode` from `s
 - [x] Skeleton extraction applied for files above thresholds
 - [x] `event: done` fires after last section and redirects browser to `/preview/<session_id>`
 - [x] DeepSeek failure shows a retry button, does not crash the stream
+
+## Bug fix — SSE newline stripping
+
+`message` tokens were embedded in the SSE body as bare strings: `data: {token}\n\n`. When a token contained a literal `\n` (e.g. at the end of a markdown line), the newline terminated the SSE `data:` field early and was silently dropped by the browser's EventSource parser. The accumulated buffer in JS had all newlines stripped, so `marked.parse()` received a single line of text and could not recognise headers, lists, or code fences — everything rendered as plain text.
+
+**Fix:** `main.py`'s `/stream/{session_id}` event generator now wraps `message` tokens with `json.dumps()` before embedding: `data: {json.dumps(data)}\n\n`. The JS accumulator calls `JSON.parse(e.data)` to recover the string including its newlines. Named events (`section-start`, `section-complete`, `done`, `gen-error`) are unaffected — they carry only plain keys, never freeform text.

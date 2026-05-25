@@ -18,3 +18,16 @@ Jinja2 preview template with section cards (stable IDs: `section-readme`, `secti
 - [x] Each section card has a stable HTML ID
 - [x] Download returns a `.zip` containing the built `site/` folder and raw markdown files
 - [ ] The unzipped HTML site opens correctly in a browser with navigation and search — **not verified; `subprocess.run` is mocked in tests, real MkDocs build requires manual check**
+
+## Follow-up change (preview page unified with generation)
+
+`preview.html` was extended to serve as both the generation page and the preview page, eliminating the separate `generate.html` intermediate step.
+
+The server now passes a `generating` boolean (true when `docs/` doesn't exist yet) and a `mode` string to the template. In `generating` mode:
+
+- All section cards are pre-rendered with skeleton placeholders and a "Pending" status badge; the TOC is present from the start.
+- The page opens an `EventSource` to `/stream/{session_id}` on load and animates each card through Pending → Generating (indigo border + spinner) → Done (rendered markdown + green badge) as SSE events arrive.
+- Edit, Save, and Regenerate buttons are hidden and revealed all at once after the `done` event.
+- The Download ZIP button is disabled (pointer-events-none) until generation completes.
+
+In normal (non-generating) mode the page behaves identically to before. The `preview_page` route in `main.py` was updated to detect the generating state and pass section metadata (with empty content) when docs don't exist yet. Upload and upload-sample redirects were changed from `/generate/` to `/preview/`. Tests that asserted the `/generate/` redirect prefix were updated to `/preview/`.

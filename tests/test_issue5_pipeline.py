@@ -174,5 +174,5 @@ def test_stream_endpoint_emits_message_token_as_data_only(tmp_path, monkeypatch)
 
     lines = response.text.splitlines()
     data_lines = [l for l in lines if l.startswith("data:")]
-    # "Hello world" token should appear as a plain data: line
-    assert any("Hello world" in l for l in data_lines)
+    # "Hello world" token should appear as a JSON-encoded data: line
+    assert any('"Hello world"' in l for l in data_lines)

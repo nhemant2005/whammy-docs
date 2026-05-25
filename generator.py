@@ -160,13 +160,15 @@ def _read_files_with_skeleton(session_dir: Path, rel_paths: list[str]) -> str:
     return "\n\n".join(chunks)
 
 
-def _build_prompt(files_content: str, tree: str) -> str:
+def _build_prompt(files_content: str, tree: str, feedback: str = "") -> str:
     parts = []
     if tree:
         parts.append(f"## Directory structure\n```\n{tree}\n```")
     if files_content:
         parts.append(f"## Source files\n{files_content}")
     parts.append("Generate the documentation now.")
+    if feedback:
+        parts.append(f"Additional instructions: {feedback}")
     return "\n\n".join(parts)
 
 
@@ -271,7 +273,7 @@ async def stream_all_sections(session_dir: Path) -> AsyncIterator[tuple[str, str
 
 
 async def stream_one_section(
-    session_dir: Path, section_key: str
+    session_dir: Path, section_key: str, feedback: str = ""
 ) -> AsyncIterator[tuple[str, str]]:
     """
     Yield (event_type, data) tuples for one doc section regeneration.
@@ -295,7 +297,7 @@ async def stream_one_section(
 
     files_content = _read_files_with_skeleton(session_dir, all_files)
     tree = mapping.get("architecture", "") if config["use_tree"] else ""
-    prompt = _build_prompt(files_content, tree)
+    prompt = _build_prompt(files_content, tree, feedback=feedback)
 
     generated: list[str] = []
     try:

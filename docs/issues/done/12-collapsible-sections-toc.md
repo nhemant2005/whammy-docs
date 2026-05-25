@@ -25,3 +25,11 @@ Add collapse/expand behaviour to section cards on `preview.html` and a sticky ri
 ## Blocked by
 
 None — can start immediately.
+
+## Follow-up change (generating mode)
+
+The collapsible and TOC behaviour was adapted to work alongside the new unified generation flow (see Issue 6 follow-up).
+
+- **During generation** (`generating=True`): all section bodies are expanded from the start so every card is visible as its skeleton fills in. The TOC is present and functional from first load. `handleHeaderClick()` is a no-op while `isGenerating` is true, so cards cannot be accidentally collapsed mid-stream.
+- **After generation completes**: `isGenerating` is set to false, restoring normal toggle behaviour. Chevrons and "Click to expand" hints are rendered with Jinja conditionals so they appear in the correct initial state without a JS init pass.
+- The expand-hint `<span>` is always present in the DOM (needed by `toggleSection`) but conditionally hidden via Jinja (`hidden` class) so it only shows for non-first sections in non-generating mode.

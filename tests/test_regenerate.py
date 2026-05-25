@@ -83,8 +83,8 @@ def test_regenerate_streams_tokens_as_data_lines(tmp_path, monkeypatch):
     response = client.get(f"/regenerate/{session_id}/readme")
     body = response.text
 
-    assert "data: Hello\n" in body
-    assert "data:  world\n" in body
+    assert 'data: "Hello"\n' in body
+    assert 'data: " world"\n' in body
 
 
 # ---------------------------------------------------------------------------

@@ -14,3 +14,9 @@
 - [x] Tokens stream in real time into the target section card
 - [x] New content written to disk after regeneration completes
 - [x] `edited` flag cleared for the regenerated section in `session.json`
+
+## Bug fix — SSE newline stripping (same root cause as Issue 5)
+
+The `/regenerate/{session_id}/{section_key}` endpoint had the same encoding bug: `message` tokens were written as `data: {token}\n\n`, causing any `\n` within a token to terminate the SSE field and be dropped. The `regenSection()` accumulator in `preview.html` received stripped text, and `marked.parse()` could not render structure.
+
+**Fix:** Same as Issue 5 — `json.dumps()` on the server, `JSON.parse(e.data)` in the `regenSection()` message listener in `preview.html`.

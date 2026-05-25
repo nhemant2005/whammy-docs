@@ -15,11 +15,11 @@ client = TestClient(app, follow_redirects=False)
 # ---------------------------------------------------------------------------
 
 
-def test_upload_sample_redirects_to_generate(tmp_path, monkeypatch):
+def test_upload_sample_redirects_to_preview(tmp_path, monkeypatch):
     monkeypatch.setenv("WHAMMY_TMP_DIR", str(tmp_path))
     response = client.post("/upload-sample")
     assert response.status_code == 303
-    assert response.headers["location"].startswith("/generate/")
+    assert response.headers["location"].startswith("/preview/")
 
 
 # ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ def test_upload_sample_creates_session_directory(tmp_path, monkeypatch):
     response = client.post("/upload-sample")
     assert response.status_code == 303
 
-    session_id = response.headers["location"].split("/generate/")[1]
+    session_id = response.headers["location"].split("/preview/")[1]
     session_dir = tmp_path / f"whammy-{session_id}"
     assert session_dir.is_dir()
 
@@ -47,7 +47,7 @@ def test_upload_sample_session_json_values(tmp_path, monkeypatch):
     response = client.post("/upload-sample")
     assert response.status_code == 303
 
-    session_id = response.headers["location"].split("/generate/")[1]
+    session_id = response.headers["location"].split("/preview/")[1]
     session_json = tmp_path / f"whammy-{session_id}" / "session.json"
     assert session_json.exists()
 
@@ -67,7 +67,7 @@ def test_upload_sample_creates_mapping_json(tmp_path, monkeypatch):
     response = client.post("/upload-sample")
     assert response.status_code == 303
 
-    session_id = response.headers["location"].split("/generate/")[1]
+    session_id = response.headers["location"].split("/preview/")[1]
     mapping = tmp_path / f"whammy-{session_id}" / "mapping.json"
     assert mapping.exists()
 
@@ -82,7 +82,7 @@ def test_upload_sample_extracts_sample_files(tmp_path, monkeypatch):
     response = client.post("/upload-sample")
     assert response.status_code == 303
 
-    session_id = response.headers["location"].split("/generate/")[1]
+    session_id = response.headers["location"].split("/preview/")[1]
     session_dir = tmp_path / f"whammy-{session_id}"
     py_files = list(session_dir.rglob("*.py"))
     assert len(py_files) >= 1, "Expected at least one .py file from the sample project"

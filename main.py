@@ -8,7 +8,7 @@ import uuid
 import zipfile
 from pathlib import Path
 
-from fastapi import FastAPI, Request, UploadFile, File, Form
+from fastapi import FastAPI, Request, UploadFile, File, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
 from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
@@ -87,7 +87,7 @@ async def upload(
 
     scan(session_dir)
 
-    return RedirectResponse(url=f"/generate/{session_id}", status_code=303)
+    return RedirectResponse(url=f"/preview/{session_id}", status_code=303)
 
 
 @app.post("/upload-sample")
@@ -114,7 +114,7 @@ async def upload_sample():
 
     scan(session_dir)
 
-    return RedirectResponse(url=f"/generate/{session_id}", status_code=303)
+    return RedirectResponse(url=f"/preview/{session_id}", status_code=303)
 
 
 @app.get("/generate/{session_id}", response_class=HTMLResponse)
@@ -138,10 +138,8 @@ async def stream(session_id: str):
     async def event_generator():
         async for event_type, data in stream_all_sections(session_dir):
             if event_type == "message":
-                # Plain data: line (unnamed = "message" event in SSE)
-                yield f"data: {data}\n\n"
+                yield f"data: {json.dumps(data)}\n\n"
             else:
-                # Named event
                 yield f"event: {event_type}\ndata: {data}\n\n"
 
     return StreamingResponse(
@@ -161,20 +159,30 @@ async def preview_page(request: Request, session_id: str):
     mode = session.get("mode", "comprehensive")
     section_keys = _QUICK_SECTION_KEYS if mode == "quick" else _COMPREHENSIVE_SECTION_KEYS
 
-    sections = []
     docs_dir = session_dir / "docs"
+    generating = not docs_dir.exists() or not any(docs_dir.glob("*.md"))
+
+    sections = []
     for key in section_keys:
-        doc_file = docs_dir / f"{key}.md"
-        if doc_file.exists():
-            sections.append({
-                "key": key,
-                "id": f"section-{key.replace('_', '-')}",
-                "title": _SECTION_TITLES[key],
-                "content": doc_file.read_text(encoding="utf-8"),
-            })
+        content = ""
+        if not generating:
+            doc_file = docs_dir / f"{key}.md"
+            if doc_file.exists():
+                content = doc_file.read_text(encoding="utf-8")
+        sections.append({
+            "key": key,
+            "id": f"section-{key.replace('_', '-')}",
+            "title": _SECTION_TITLES[key],
+            "content": content,
+        })
 
     return templates.TemplateResponse(
-        request, "preview.html", {"session_id": session_id, "sections": sections}
+        request, "preview.html", {
+            "session_id": session_id,
+            "sections": sections,
+            "mode": mode,
+            "generating": generating,
+        }
     )
 
 
@@ -204,15 +212,15 @@ async def edit_section(body: _EditRequest):
 
 
 @app.get("/regenerate/{session_id}/{section_key}")
-async def regenerate_section(session_id: str, section_key: str):
+async def regenerate_section(session_id: str, section_key: str, feedback: str = Query(default="")):
     session_dir = _tmp_dir() / f"whammy-{session_id}"
     if not session_dir.exists():
         return HTMLResponse("Session not found", status_code=404)
 
     async def event_generator():
-        async for event_type, data in stream_one_section(session_dir, section_key):
+        async for event_type, data in stream_one_section(session_dir, section_key, feedback=feedback):
             if event_type == "message":
-                yield f"data: {data}\n\n"
+                yield f"data: {json.dumps(data)}\n\n"
             else:
                 yield f"event: {event_type}\ndata: {data}\n\n"
 

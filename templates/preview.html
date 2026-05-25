@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WhammyDocs — Preview</title>
+  <title>WhammyDocs — {% if generating %}Generating…{% else %}Preview{% endif %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
@@ -27,11 +27,15 @@
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-4">
         <a href="/" class="text-sm text-indigo-600 hover:underline">&larr; Start over</a>
-        <h1 class="text-lg font-bold text-gray-900">Documentation Preview</h1>
+        <h1 id="page-title" class="text-lg font-bold text-gray-900">
+          {% if generating %}Generating Documentation…{% else %}Documentation Preview{% endif %}
+        </h1>
       </div>
       <a
+        id="download-btn"
         href="/download/{{ session_id }}"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition-colors shadow-sm {% if generating %}bg-gray-100 text-gray-400 pointer-events-none{% else %}bg-indigo-600 text-white hover:bg-indigo-700{% endif %}"
+        {% if generating %}aria-disabled="true" tabindex="-1"{% endif %}
       >
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -40,40 +44,67 @@
         Download ZIP
       </a>
     </div>
+    <!-- Generation progress bar (only visible while generating) -->
+    <div id="gen-progress-wrap" class="h-1 bg-gray-100 overflow-hidden{% if not generating %} hidden{% endif %}">
+      <div id="gen-progress-bar" class="h-1 bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500" style="width: 0%"></div>
+    </div>
   </header>
+
+  <!-- Generation status line -->
+  <div id="gen-status-wrap" class="max-w-6xl mx-auto px-4 pt-3{% if not generating %} hidden{% endif %}">
+    <p id="gen-status" class="text-sm text-indigo-500 font-medium">Connecting to generation stream…</p>
+  </div>
+
+  <!-- Error banner (hidden by default) -->
+  <div id="gen-error-banner" class="hidden max-w-6xl mx-auto px-4 mt-3">
+    <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+      <svg class="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div class="flex-1">
+        <p class="text-sm font-medium text-red-800">Generation error</p>
+        <p id="gen-error-message" class="text-sm text-red-600 mt-1"></p>
+      </div>
+    </div>
+  </div>
 
   <div class="max-w-6xl mx-auto px-4 py-8 flex gap-8">
 
     <!-- Main content -->
     <main class="flex-1 min-w-0">
-      <p class="text-gray-500 mb-6 text-sm">Review, edit, and download your generated docs.</p>
+      <p id="preview-subtitle" class="text-gray-500 mb-6 text-sm{% if generating %} hidden{% endif %}">Review, edit, and download your generated docs.</p>
 
       <!-- Section cards -->
       <div class="space-y-6">
         {% for section in sections %}
         <div id="{{ section.id }}" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
 
-          <!-- Card header — clickable toggle -->
+          <!-- Card header — toggle gated by isGenerating in JS -->
           <div
             class="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50 cursor-pointer select-none"
-            onclick="toggleSection('{{ section.key }}')"
+            onclick="handleHeaderClick('{{ section.key }}')"
           >
             <div class="flex items-center gap-3 min-w-0">
-              <!-- Chevron indicator -->
               <svg
                 id="chevron-{{ section.key }}"
-                class="h-4 w-4 text-gray-400 transition-transform duration-200 flex-shrink-0{% if not loop.first %} -rotate-90{% endif %}"
+                class="h-4 w-4 text-gray-400 transition-transform duration-200 flex-shrink-0{% if not generating and not loop.first %} -rotate-90{% endif %}"
                 fill="none" viewBox="0 0 24 24" stroke="currentColor"
               >
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
               <h2 class="text-base font-semibold text-gray-900">{{ section.title }}</h2>
-              {% if not loop.first %}
-              <span id="expand-hint-{{ section.key }}" class="text-xs text-gray-400 italic">Click to expand</span>
-              {% endif %}
+              <span id="expand-hint-{{ section.key }}" class="text-xs text-gray-400 italic{% if generating or loop.first %} hidden{% endif %}">Click to expand</span>
             </div>
-            <!-- Buttons — stopPropagation so clicks don't toggle the card -->
-            <div class="flex items-center gap-2 flex-shrink-0" onclick="event.stopPropagation()">
+
+            <!-- Status badge (generating) -->
+            <div id="gen-badge-{{ section.key }}" class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-400{% if not generating %} hidden{% endif %}">
+              <span class="h-2 w-2 rounded-full bg-gray-300 inline-block"></span>
+              Pending
+            </div>
+
+            <!-- Action buttons (hidden during generation) -->
+            <div id="action-btns-{{ section.key }}" class="flex items-center gap-2 flex-shrink-0{% if generating %} hidden{% endif %}" onclick="event.stopPropagation()">
               <button
                 id="edit-btn-{{ section.key }}"
                 onclick="startEdit('{{ section.key }}')"
@@ -97,7 +128,7 @@
               </button>
               <button
                 id="regen-btn-{{ section.key }}"
-                onclick="regenSection('{{ session_id }}', '{{ section.key }}')"
+                onclick="handleRegenBtnClick('{{ session_id }}', '{{ section.key }}')"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors"
               >
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -109,18 +140,55 @@
             </div>
           </div>
 
-          <!-- Collapsible body (first section expanded, rest collapsed) -->
-          <div id="section-body-{{ section.key }}"{% if not loop.first %} class="hidden"{% endif %}>
+          <!-- Card body: all expanded during generation, first expanded on preview -->
+          <div id="section-body-{{ section.key }}"{% if not generating and not loop.first %} class="hidden"{% endif %}>
+
+            <!-- Feedback panel (shown when Regenerate with AI is clicked) -->
+            <div id="feedback-panel-{{ section.key }}" class="hidden border-b border-indigo-100 bg-slate-50/70 px-6 py-3">
+              <label class="text-xs font-medium text-gray-500 block mb-1.5">Instructions <span class="font-normal text-gray-400">(optional)</span></label>
+              <textarea
+                id="feedback-input-{{ section.key }}"
+                class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white placeholder-gray-400"
+                rows="2"
+                placeholder="e.g. Make it more concise, focus on error handling…"
+              ></textarea>
+              <div class="flex justify-end mt-2">
+                <button
+                  onclick="confirmRegen('{{ session_id }}', '{{ section.key }}')"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Generate
+                </button>
+              </div>
+            </div>
 
             <!-- Unsaved indicator -->
             <div id="unsaved-{{ section.key }}" class="hidden px-6 py-2 bg-amber-50 border-b border-amber-100">
               <p class="text-xs text-amber-700 font-medium">Unsaved changes — click Save to keep your edits</p>
             </div>
 
-            <!-- Rendered preview -->
-            <div id="rendered-{{ section.key }}" class="prose max-w-none px-6 py-5 text-gray-800 text-sm"></div>
+            <!-- Pending skeleton (only present when generating, removed on section-complete) -->
+            {% if generating %}
+            <div id="skeleton-{{ section.key }}" class="px-6 py-5">
+              <div class="animate-pulse space-y-2.5">
+                <div class="h-3 bg-gray-200 rounded w-3/4"></div>
+                <div class="h-3 bg-gray-200 rounded w-full"></div>
+                <div class="h-3 bg-gray-200 rounded w-5/6"></div>
+                <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+                <div class="h-3 bg-gray-200 rounded w-4/5"></div>
+                <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </div>
+            {% endif %}
 
-            <!-- Editor (hidden by default) -->
+            <!-- Rendered markdown -->
+            <div id="rendered-{{ section.key }}" class="prose max-w-none px-6 py-5 text-gray-800 text-sm{% if generating %} hidden{% endif %}"></div>
+
+            <!-- Editor textarea (hidden by default) -->
             <textarea
               id="editor-{{ section.key }}"
               class="hidden w-full px-6 py-4 font-mono text-sm text-gray-800 bg-gray-50 border-t border-gray-200 resize-y focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400"
@@ -129,13 +197,12 @@
             >{{ section.content }}</textarea>
 
           </div>
-
         </div>
         {% endfor %}
       </div>
     </main>
 
-    <!-- Sticky TOC sidebar — hidden on mobile -->
+    <!-- Sticky TOC sidebar — always present -->
     <aside class="hidden md:block w-52 flex-shrink-0">
       <div class="sticky top-20">
         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Contents</p>
@@ -153,22 +220,41 @@
   </div>
 
   <script>
-    // Render all sections on load
+    const SESSION_ID = "{{ session_id }}";
+    const MODE = "{{ mode }}";
+    const KNOWN_TOTAL = MODE === "quick" ? 2 : 5;
+    const SECTION_TITLES = {
+      readme: "README",
+      api_reference: "API Reference",
+      architecture: "Architecture",
+      getting_started: "Getting Started",
+      deployment: "Deployment",
+    };
+
+    // Mutable flag — set to false when generation completes
+    let isGenerating = {{ 'true' if generating else 'false' }};
+
+    // ── On-load: render markdown from textarea (non-generating mode only) ──
+    {% if not generating %}
     {% for section in sections %}
     (function () {
       const editor = document.getElementById("editor-{{ section.key }}");
       const rendered = document.getElementById("rendered-{{ section.key }}");
-      if (editor && rendered) {
-        rendered.innerHTML = marked.parse(editor.value);
-      }
+      if (editor && rendered) rendered.innerHTML = marked.parse(editor.value);
     })();
     {% endfor %}
+    {% endif %}
+
+    // ── Header click — gated by isGenerating ──
+    function handleHeaderClick(key) {
+      if (isGenerating) return;
+      toggleSection(key);
+    }
 
     function toggleSection(key) {
       const body = document.getElementById("section-body-" + key);
       const chevron = document.getElementById("chevron-" + key);
       const hint = document.getElementById("expand-hint-" + key);
-
       const collapsed = body.classList.contains("hidden");
       if (collapsed) {
         body.classList.remove("hidden");
@@ -181,11 +267,10 @@
       }
     }
 
+    // ── Edit / Save ──
     function startEdit(key) {
-      // Auto-expand if section is collapsed
       const body = document.getElementById("section-body-" + key);
       if (body.classList.contains("hidden")) toggleSection(key);
-
       document.getElementById("rendered-" + key).classList.add("hidden");
       document.getElementById("editor-" + key).classList.remove("hidden");
       document.getElementById("edit-btn-" + key).classList.add("hidden");
@@ -215,6 +300,10 @@
       });
     }
 
+    // ── Regenerate ──
+    const REGEN_CLASS_IDLE   = "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors";
+    const REGEN_CLASS_CANCEL = "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors";
+
     const REGEN_BTN_IDLE = `
       <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -222,14 +311,66 @@
       </svg>
       Regenerate with AI
     `;
+    const REGEN_BTN_CANCEL = `
+      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+      Cancel
+    `;
 
-    function regenSection(sessionId, key) {
-      // Auto-expand if section is collapsed
+    const _regenPanelOpen = {};
+
+    function handleRegenBtnClick(sessionId, key) {
+      if (_regenPanelOpen[key]) {
+        cancelRegen(key);
+      } else {
+        openRegenPanel(key);
+      }
+    }
+
+    function openRegenPanel(key) {
+      const body = document.getElementById("section-body-" + key);
+      if (body.classList.contains("hidden")) toggleSection(key);
+
+      _regenPanelOpen[key] = true;
+      document.getElementById("feedback-panel-" + key).classList.remove("hidden");
+      document.getElementById("feedback-input-" + key).focus();
+
+      const btn = document.getElementById("regen-btn-" + key);
+      btn.className = REGEN_CLASS_CANCEL;
+      btn.innerHTML = REGEN_BTN_CANCEL;
+
+      document.getElementById("edit-btn-" + key).classList.add("hidden");
+    }
+
+    function cancelRegen(key) {
+      _regenPanelOpen[key] = false;
+      document.getElementById("feedback-panel-" + key).classList.add("hidden");
+      document.getElementById("feedback-input-" + key).value = "";
+
+      const btn = document.getElementById("regen-btn-" + key);
+      btn.className = REGEN_CLASS_IDLE;
+      btn.innerHTML = REGEN_BTN_IDLE;
+
+      document.getElementById("edit-btn-" + key).classList.remove("hidden");
+    }
+
+    function confirmRegen(sessionId, key) {
+      const feedback = document.getElementById("feedback-input-" + key).value.trim();
+      _regenPanelOpen[key] = false;
+      document.getElementById("feedback-panel-" + key).classList.add("hidden");
+      document.getElementById("feedback-input-" + key).value = "";
+      document.getElementById("edit-btn-" + key).classList.remove("hidden");
+      regenSection(sessionId, key, feedback);
+    }
+
+    function regenSection(sessionId, key, feedback = "") {
       const body = document.getElementById("section-body-" + key);
       if (body.classList.contains("hidden")) toggleSection(key);
 
       const btn = document.getElementById("regen-btn-" + key);
       btn.disabled = true;
+      btn.className = REGEN_CLASS_IDLE;
       btn.innerHTML = `
         <svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -244,14 +385,16 @@
       document.getElementById("edit-btn-" + key).classList.remove("hidden");
       document.getElementById("save-btn-" + key).classList.add("hidden");
       document.getElementById("unsaved-" + key).classList.add("hidden");
-
       rendered.classList.add("opacity-30");
 
       let accumulated = "";
       let renderTimer = null;
-      const es = new EventSource(`/regenerate/${sessionId}/${key}`);
+      const url = feedback
+        ? `/regenerate/${sessionId}/${key}?feedback=${encodeURIComponent(feedback)}`
+        : `/regenerate/${sessionId}/${key}`;
+      const es = new EventSource(url);
       es.addEventListener("message", (e) => {
-        accumulated += e.data;
+        accumulated += JSON.parse(e.data);
         clearTimeout(renderTimer);
         renderTimer = setTimeout(() => {
           rendered.innerHTML = marked.parse(accumulated);
@@ -264,15 +407,165 @@
         rendered.classList.remove("opacity-30");
         document.getElementById("editor-" + key).value = accumulated;
         btn.disabled = false;
+        btn.className = REGEN_CLASS_IDLE;
         btn.innerHTML = REGEN_BTN_IDLE;
       });
       es.onerror = () => {
         es.close();
         clearTimeout(renderTimer);
+        rendered.classList.remove("opacity-30");
         btn.disabled = false;
+        btn.className = REGEN_CLASS_IDLE;
         btn.innerHTML = REGEN_BTN_IDLE;
       };
     }
+
+    // ── Generation mode SSE ──
+    {% if generating %}
+    (function () {
+      let currentSection = null;
+      let sectionBuffers = {};
+      let completedCount = 0;
+
+      const progressBar = document.getElementById("gen-progress-bar");
+      const progressWrap = document.getElementById("gen-progress-wrap");
+      const statusEl = document.getElementById("gen-status");
+      const statusWrap = document.getElementById("gen-status-wrap");
+      const errorBanner = document.getElementById("gen-error-banner");
+      const errorMsg = document.getElementById("gen-error-message");
+
+      function setSectionActive(key) {
+        const badge = document.getElementById("gen-badge-" + key);
+        if (badge) {
+          badge.innerHTML = `
+            <svg class="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            Generating…
+          `;
+          badge.className = "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700";
+        }
+        // Highlight active card
+        const card = document.getElementById("section-" + key.replace(/_/g, "-"));
+        if (card) {
+          card.classList.add("border-indigo-300", "shadow-md");
+          card.classList.remove("border-gray-200", "shadow-sm");
+          card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+        // Shift skeleton to indigo pulse
+        const skeleton = document.getElementById("skeleton-" + key);
+        if (skeleton) {
+          skeleton.querySelectorAll(".bg-gray-200").forEach(d => {
+            d.classList.remove("bg-gray-200");
+            d.classList.add("bg-indigo-200");
+          });
+        }
+      }
+
+      function setSectionDone(key, content) {
+        // Update badge
+        const badge = document.getElementById("gen-badge-" + key);
+        if (badge) {
+          badge.innerHTML = `
+            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            Done
+          `;
+          badge.className = "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700";
+        }
+        // Reset card border
+        const card = document.getElementById("section-" + key.replace(/_/g, "-"));
+        if (card) {
+          card.classList.remove("border-indigo-300", "shadow-md");
+          card.classList.add("border-gray-200", "shadow-sm");
+        }
+        // Remove skeleton, show rendered content
+        const skeleton = document.getElementById("skeleton-" + key);
+        if (skeleton) skeleton.remove();
+
+        const rendered = document.getElementById("rendered-" + key);
+        if (rendered) {
+          rendered.innerHTML = marked.parse(content);
+          rendered.classList.remove("hidden");
+        }
+        // Populate textarea so editing works after generation
+        const editor = document.getElementById("editor-" + key);
+        if (editor) editor.value = content;
+
+        completedCount++;
+        if (progressBar) progressBar.style.width = `${Math.round((completedCount / KNOWN_TOTAL) * 100)}%`;
+      }
+
+      function revealAll() {
+        isGenerating = false;
+
+        // Enable download button
+        const downloadBtn = document.getElementById("download-btn");
+        if (downloadBtn) {
+          downloadBtn.classList.remove("bg-gray-100", "text-gray-400", "pointer-events-none");
+          downloadBtn.classList.add("bg-indigo-600", "text-white", "hover:bg-indigo-700");
+          downloadBtn.removeAttribute("aria-disabled");
+          downloadBtn.removeAttribute("tabindex");
+        }
+
+        // Update header title
+        const title = document.getElementById("page-title");
+        if (title) title.textContent = "Documentation Preview";
+
+        // Hide progress bar and status line
+        if (progressWrap) progressWrap.classList.add("hidden");
+        if (statusWrap) statusWrap.classList.add("hidden");
+
+        // Show subtitle
+        const subtitle = document.getElementById("preview-subtitle");
+        if (subtitle) subtitle.classList.remove("hidden");
+
+        // Swap badges → action buttons on every section
+        document.querySelectorAll("[id^='gen-badge-']").forEach(el => el.classList.add("hidden"));
+        document.querySelectorAll("[id^='action-btns-']").forEach(el => el.classList.remove("hidden"));
+      }
+
+      const es = new EventSource("/stream/{{ session_id }}");
+
+      es.addEventListener("section-start", (e) => {
+        const key = e.data.trim();
+        currentSection = key;
+        sectionBuffers[key] = "";
+        setSectionActive(key);
+        if (statusEl) statusEl.textContent = `Generating ${SECTION_TITLES[key] || key}… (${completedCount + 1} of ${KNOWN_TOTAL})`;
+      });
+
+      es.addEventListener("message", (e) => {
+        if (!currentSection) return;
+        sectionBuffers[currentSection] += JSON.parse(e.data);
+      });
+
+      es.addEventListener("section-complete", (e) => {
+        const key = e.data.trim();
+        setSectionDone(key, sectionBuffers[key] || "");
+        currentSection = null;
+      });
+
+      es.addEventListener("done", () => {
+        es.close();
+        if (progressBar) progressBar.style.width = "100%";
+        setTimeout(revealAll, 400);
+      });
+
+      es.addEventListener("gen-error", (e) => {
+        if (errorBanner) errorBanner.classList.remove("hidden");
+        if (errorMsg) errorMsg.textContent = e.data;
+      });
+
+      es.onerror = () => {
+        es.close();
+        if (errorBanner) errorBanner.classList.remove("hidden");
+        if (errorMsg) errorMsg.textContent = "Connection to generation stream lost.";
+      };
+    })();
+    {% endif %}
   </script>
 
 </body>
