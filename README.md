@@ -5,7 +5,7 @@ AI-powered documentation generator. Upload your project as a `.zip`, get a compl
 ---
 
 ## Demo video
-
+Attached below is a video containing a basic demo and how WhammyDocs works !!
 [![WhammyDocs Demo](https://img.youtube.com/vi/0v5cc95evUM/0.jpg)](https://youtu.be/0v5cc95evUM)
 
 ---
