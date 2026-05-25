@@ -2,6 +2,7 @@ import io
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import uuid
 import zipfile
@@ -9,6 +10,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
+from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 
 from scanner import scan
@@ -78,8 +80,9 @@ async def upload(
         session_dir.rmdir()
         return _error(request, f"Could not read zip file: {exc}")
 
+    project_name = Path(file.filename).stem
     (session_dir / "session.json").write_text(
-        json.dumps({"session_id": session_id, "mode": mode})
+        json.dumps({"session_id": session_id, "mode": mode, "project_name": project_name})
     )
 
     scan(session_dir)
@@ -146,6 +149,31 @@ async def preview_page(request: Request, session_id: str):
     )
 
 
+class _EditRequest(BaseModel):
+    session_id: str
+    section: str
+    content: str
+
+
+@app.post("/edit")
+async def edit_section(body: _EditRequest):
+    session_dir = _tmp_dir() / f"whammy-{body.session_id}"
+    if not session_dir.exists():
+        return HTMLResponse("Session not found", status_code=404)
+
+    doc_file = session_dir / "docs" / f"{body.section}.md"
+    doc_file.write_text(body.content, encoding="utf-8")
+
+    session_path = session_dir / "session.json"
+    session = json.loads(session_path.read_text(encoding="utf-8"))
+    edited = session.get("edited", {})
+    edited[body.section] = True
+    session["edited"] = edited
+    session_path.write_text(json.dumps(session), encoding="utf-8")
+
+    return Response(status_code=200)
+
+
 @app.get("/download/{session_id}")
 async def download(session_id: str):
     session_dir = _tmp_dir() / f"whammy-{session_id}"
@@ -155,9 +183,25 @@ async def download(session_id: str):
     docs_dir = session_dir / "docs"
     site_dir = session_dir / "site"
 
-    # Build mkdocs.yml dynamically from generated sections
-    nav_entries = []
+    session = json.loads((session_dir / "session.json").read_text(encoding="utf-8"))
+    project_name = session.get("project_name", "project")
+
+    # Guard: no docs generated yet
+    generated_docs = list(docs_dir.glob("*.md")) if docs_dir.exists() else []
+    if not generated_docs:
+        return HTMLResponse("No documentation generated yet. Complete generation first.", status_code=400)
+
+    # Copy readme.md → index.md so MkDocs produces a root index.html
+    readme = docs_dir / "readme.md"
+    index_md = docs_dir / "index.md"
+    if readme.exists():
+        index_md.write_text(readme.read_text(encoding="utf-8"), encoding="utf-8")
+
+    # Build nav: home page first, then remaining sections
+    nav_entries = ["  - Home: index.md"]
     for key in _COMPREHENSIVE_SECTION_KEYS:
+        if key == "readme":
+            continue
         doc_file = docs_dir / f"{key}.md"
         if doc_file.exists():
             nav_entries.append(f"  - {_MKDOCS_NAV_TITLES[key]}: {key}.md")
@@ -173,7 +217,7 @@ async def download(session_id: str):
     )
 
     subprocess.run(
-        ["mkdocs", "build", "--config-file", str(mkdocs_yml)],
+        [sys.executable, "-m", "mkdocs", "build", "--config-file", str(mkdocs_yml)],
         capture_output=True,
         check=False,
     )
@@ -192,5 +236,5 @@ async def download(session_id: str):
     return Response(
         content=buf.read(),
         media_type="application/zip",
-        headers={"Content-Disposition": "attachment; filename=docs.zip"},
+        headers={"Content-Disposition": f"attachment; filename=Documentation-{project_name}.zip"},
     )

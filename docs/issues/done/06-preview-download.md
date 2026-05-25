@@ -14,7 +14,7 @@ Jinja2 preview template with section cards (stable IDs: `section-readme`, `secti
 
 ## Acceptance criteria
 
-- [ ] Preview page renders all generated sections as formatted HTML via `marked.js`
-- [ ] Each section card has a stable HTML ID
-- [ ] Download returns a `.zip` containing the built `site/` folder and raw markdown files
-- [ ] The unzipped HTML site opens correctly in a browser with navigation and search
+- [x] Preview page renders all generated sections as formatted HTML via `marked.js`
+- [x] Each section card has a stable HTML ID
+- [x] Download returns a `.zip` containing the built `site/` folder and raw markdown files
+- [ ] The unzipped HTML site opens correctly in a browser with navigation and search — **not verified; `subprocess.run` is mocked in tests, real MkDocs build requires manual check**

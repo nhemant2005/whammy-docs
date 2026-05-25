@@ -109,7 +109,7 @@
       }
     }
 
-    const es = new EventSource(`/stream/${SESSION_ID}`);
+    const es = new EventSource("/stream/{{ session_id }}");
 
     es.addEventListener("section-start", (e) => {
       const key = e.data.trim();

@@ -10,3 +10,17 @@ build/
 site/
 .DS_Store
 .claude/settings.local.json
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+
+# Handoff docs
+whammy-docs-handoff.md
