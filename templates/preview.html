@@ -9,33 +9,202 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     html { scroll-behavior: smooth; }
-    .prose h1 { font-size: 1.5rem; font-weight: 700; margin: 1rem 0 0.5rem; }
-    .prose h2 { font-size: 1.25rem; font-weight: 600; margin: 0.75rem 0 0.5rem; }
-    .prose h3 { font-size: 1.1rem; font-weight: 600; margin: 0.5rem 0 0.25rem; }
-    .prose p { margin: 0.5rem 0; line-height: 1.6; }
-    .prose pre { background: #f3f4f6; border-radius: 0.375rem; padding: 0.75rem; overflow-x: auto; margin: 0.5rem 0; }
-    .prose code { font-family: monospace; font-size: 0.875em; background: #f3f4f6; padding: 0.1em 0.3em; border-radius: 0.2em; }
-    .prose pre code { background: none; padding: 0; }
+
+    /* Prose — dark mode overrides */
+    .prose { color: var(--color-text); font-size: 0.875rem; }
+    .prose h1 { font-size: 1.5rem; font-weight: 800; margin: 1rem 0 0.5rem; color: var(--color-text); }
+    .prose h2 { font-size: 1.25rem; font-weight: 700; margin: 0.75rem 0 0.5rem; color: var(--color-text); }
+    .prose h3 { font-size: 1.1rem; font-weight: 600; margin: 0.5rem 0 0.25rem; color: var(--color-text); }
+    .prose p { margin: 0.5rem 0; line-height: 1.6; color: var(--color-text); }
+    .prose pre { background: var(--color-base); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.75rem; overflow-x: auto; margin: 0.5rem 0; }
+    .prose code { font-family: monospace; font-size: 0.875em; background: var(--color-base); color: var(--color-accent); padding: 0.1em 0.35em; border-radius: 4px; border: 1px solid var(--color-border); }
+    .prose pre code { background: none; padding: 0; border: none; color: var(--color-text); }
     .prose ul, .prose ol { padding-left: 1.5rem; margin: 0.5rem 0; }
-    .prose li { margin: 0.25rem 0; }
-    .prose a { color: #4f46e5; text-decoration: underline; }
+    .prose li { margin: 0.25rem 0; color: var(--color-text); }
+    .prose a { color: var(--color-primary); text-decoration: underline; }
+    .prose strong { color: var(--color-text); font-weight: 700; }
+    .prose blockquote { border-left: 3px solid var(--color-border); padding-left: 1rem; color: var(--color-text-muted); margin: 0.5rem 0; }
+    .prose hr { border-color: var(--color-border); margin: 1rem 0; }
+    .prose table { width: 100%; border-collapse: collapse; }
+    .prose th, .prose td { border: 1px solid var(--color-border); padding: 0.375rem 0.75rem; }
+    .prose th { background: var(--color-surface); font-weight: 600; }
+
+    /* Section card */
+    .section-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .section-card.active {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 1px rgba(228,217,255,0.2), 0 4px 16px rgba(0,0,0,0.25);
+    }
+
+    /* Card header */
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--color-border);
+      background: rgba(255,255,255,0.03);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* Buttons */
+    .btn-primary-sm {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.75rem;
+      background: var(--color-primary);
+      color: var(--color-base);
+      font-weight: 500;
+      font-size: 0.875rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.88; }
+    .btn-ghost-sm {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.75rem;
+      background: transparent;
+      color: var(--color-text-muted);
+      font-weight: 500;
+      font-size: 0.875rem;
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-ghost-sm:hover { border-color: var(--color-text-muted); color: var(--color-text); }
+    .btn-regen-sm {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.75rem;
+      background: transparent;
+      color: var(--color-primary);
+      font-weight: 500;
+      font-size: 0.875rem;
+      border-radius: 8px;
+      border: 1px solid rgba(228,217,255,0.35);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-regen-sm:hover { background: rgba(228,217,255,0.07); border-color: var(--color-primary); }
+    .btn-regen-cancel {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.75rem;
+      background: transparent;
+      color: var(--color-text-muted);
+      font-weight: 500;
+      font-size: 0.875rem;
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      cursor: pointer;
+    }
+
+    /* Skeleton bars (dark) */
+    .skeleton-bar { background: rgba(255,255,255,0.08); border-radius: 4px; height: 0.75rem; }
+    .skeleton-bar.active { background: rgba(228,217,255,0.15); }
+
+    /* Feedback panel */
+    .feedback-panel {
+      background: var(--color-base);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0.75rem 1.5rem;
+    }
+    .feedback-textarea {
+      width: 100%;
+      font-size: 0.875rem;
+      background: var(--color-surface);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      resize: none;
+      font-family: 'Unageo', sans-serif;
+    }
+    .feedback-textarea::placeholder { color: var(--color-text-muted); }
+    .feedback-textarea:focus { outline: none; border-color: var(--color-primary); }
+
+    /* TOC */
+    .toc-sidebar { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; }
+    .toc-link { display: block; padding: 0.375rem 0.75rem; font-size: 0.875rem; color: var(--color-text-muted); border-radius: 6px; transition: color 0.15s, background 0.15s; }
+    .toc-link:hover { color: var(--color-text); background: rgba(255,255,255,0.05); }
+
+    /* Editor textarea */
+    .editor-textarea {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      font-family: monospace;
+      font-size: 0.875rem;
+      color: var(--color-text);
+      background: var(--color-base);
+      border-top: 1px solid var(--color-border);
+      resize: vertical;
+    }
+    .editor-textarea:focus { outline: none; }
+
+    /* Progress bar */
+    #gen-progress-bar { background: linear-gradient(to right, var(--color-accent), var(--color-primary)); }
+    #gen-progress-wrap { background: rgba(255,255,255,0.05); }
+
+    /* Status text */
+    #gen-status { color: var(--color-primary); }
+
+    /* Error banner */
+    .error-banner {
+      background: rgba(220,38,38,0.12);
+      border: 1px solid rgba(220,38,38,0.35);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .error-icon { color: #f87171; }
+    .error-title { color: #fca5a5; font-weight: 600; font-size: 0.875rem; }
+    .error-detail { color: #fca5a5; font-size: 0.875rem; margin-top: 0.25rem; opacity: 0.8; }
+
+    /* Unsaved indicator */
+    .unsaved-bar {
+      padding: 0.375rem 1.5rem;
+      border-bottom: 1px solid var(--color-border);
+      background: rgba(200,255,190,0.06);
+    }
+    .unsaved-bar p { font-size: 0.75rem; color: var(--color-accent); font-weight: 500; }
+
+    /* Download btn disabled state */
+    .download-disabled {
+      background: rgba(255,255,255,0.06) !important;
+      color: var(--color-text-muted) !important;
+      pointer-events: none;
+    }
   </style>
 </head>
-<body class="min-h-screen bg-gray-50">
+<body class="min-h-screen" style="position: relative;">
 
   <!-- Sticky header -->
-  <header class="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+  <header class="sticky top-0 z-10 backdrop-blur-sm" style="background: rgba(41,47,54,0.92); border-bottom: 1px solid var(--color-border);">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-4">
-        <a href="/" class="text-sm text-indigo-600 hover:underline">&larr; Start over</a>
-        <h1 id="page-title" class="text-lg font-bold text-gray-900">
+        <a href="/" style="font-size: 0.875rem; color: var(--color-primary);" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">&larr; Start over</a>
+        <h1 id="page-title" style="font-size: 1.125rem; font-weight: 700; color: var(--color-text);">
           {% if generating %}Generating Documentation…{% else %}Documentation Preview{% endif %}
         </h1>
       </div>
       <a
         id="download-btn"
         href="/download/{{ session_id }}"
-        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition-colors shadow-sm {% if generating %}bg-gray-100 text-gray-400 pointer-events-none{% else %}bg-indigo-600 text-white hover:bg-indigo-700{% endif %}"
+        class="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors{% if generating %} download-disabled{% endif %}"
+        style="{% if not generating %}background: var(--color-primary); color: var(--color-base); font-weight: 500;{% endif %} border-radius: 8px;"
         {% if generating %}aria-disabled="true" tabindex="-1"{% endif %}
       >
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -45,62 +214,60 @@
         Download ZIP
       </a>
     </div>
-    <!-- Generation progress bar (only visible while generating) -->
-    <div id="gen-progress-wrap" class="h-1 bg-gray-100 overflow-hidden{% if not generating %} hidden{% endif %}">
-      <div id="gen-progress-bar" class="h-1 bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500" style="width: 0%"></div>
+    <!-- Generation progress bar -->
+    <div id="gen-progress-wrap" class="h-1 overflow-hidden{% if not generating %} hidden{% endif %}">
+      <div id="gen-progress-bar" class="h-1 transition-all duration-500" style="width: 0%"></div>
     </div>
   </header>
 
   <!-- Generation status line -->
   <div id="gen-status-wrap" class="max-w-6xl mx-auto px-4 pt-3{% if not generating %} hidden{% endif %}">
-    <p id="gen-status" class="text-sm text-indigo-500 font-medium">Connecting to generation stream…</p>
+    <p id="gen-status" class="text-sm font-medium">Connecting to generation stream…</p>
   </div>
 
   <!-- Error banner (hidden by default) -->
   <div id="gen-error-banner" class="hidden max-w-6xl mx-auto px-4 mt-3">
-    <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-      <svg class="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div class="error-banner flex items-start gap-3">
+      <svg class="h-5 w-5 error-icon flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
       <div class="flex-1">
-        <p class="text-sm font-medium text-red-800">Generation error</p>
-        <p id="gen-error-message" class="text-sm text-red-600 mt-1"></p>
+        <p class="error-title">Generation error</p>
+        <p id="gen-error-message" class="error-detail"></p>
       </div>
     </div>
   </div>
 
-  <div class="max-w-6xl mx-auto px-4 py-8 flex gap-8">
+  <div class="max-w-6xl mx-auto px-4 py-8 flex gap-8" style="position: relative; z-index: 1;">
 
     <!-- Main content -->
     <main class="flex-1 min-w-0">
-      <p id="preview-subtitle" class="text-gray-500 mb-6 text-sm{% if generating %} hidden{% endif %}">Review, edit, and download your generated docs.</p>
+      <p id="preview-subtitle" class="mb-6 text-sm{% if generating %} hidden{% endif %}" style="color: var(--color-text-muted);">Review, edit, and download your generated docs.</p>
 
       <!-- Section cards -->
       <div class="space-y-6">
         {% for section in sections %}
-        <div id="{{ section.id }}" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div id="{{ section.id }}" class="section-card">
 
-          <!-- Card header — toggle gated by isGenerating in JS -->
-          <div
-            class="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50 cursor-pointer select-none"
-            onclick="handleHeaderClick('{{ section.key }}')"
-          >
+          <!-- Card header -->
+          <div class="card-header" onclick="handleHeaderClick('{{ section.key }}')">
             <div class="flex items-center gap-3 min-w-0">
               <svg
                 id="chevron-{{ section.key }}"
-                class="h-4 w-4 text-gray-400 transition-transform duration-200 flex-shrink-0{% if not generating and not loop.first %} -rotate-90{% endif %}"
+                class="h-4 w-4 transition-transform duration-200 flex-shrink-0{% if not generating and not loop.first %} -rotate-90{% endif %}"
+                style="color: var(--color-text-muted);"
                 fill="none" viewBox="0 0 24 24" stroke="currentColor"
               >
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
-              <h2 class="text-base font-semibold text-gray-900">{{ section.title }}</h2>
-              <span id="expand-hint-{{ section.key }}" class="text-xs text-gray-400 italic{% if generating or loop.first %} hidden{% endif %}">Click to expand</span>
+              <h2 style="font-size: 1rem; font-weight: 500; color: var(--color-text);">{{ section.title }}</h2>
+              <span id="expand-hint-{{ section.key }}" class="text-xs italic{% if generating or loop.first %} hidden{% endif %}" style="color: var(--color-text-muted);">Click to expand</span>
             </div>
 
             <!-- Status badge (generating) -->
-            <div id="gen-badge-{{ section.key }}" class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-400{% if not generating %} hidden{% endif %}">
-              <span class="h-2 w-2 rounded-full bg-gray-300 inline-block"></span>
+            <div id="gen-badge-{{ section.key }}" class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full{% if not generating %} hidden{% endif %}" style="background: rgba(255,255,255,0.06); color: var(--color-text-muted);">
+              <span class="h-2 w-2 rounded-full inline-block" style="background: var(--color-text-muted);"></span>
               Pending
             </div>
 
@@ -109,7 +276,7 @@
               <button
                 id="edit-btn-{{ section.key }}"
                 onclick="startEdit('{{ section.key }}')"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                class="btn-ghost-sm"
               >
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -120,7 +287,7 @@
               <button
                 id="save-btn-{{ section.key }}"
                 onclick="saveEdit('{{ session_id }}', '{{ section.key }}')"
-                class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+                class="btn-primary-sm hidden"
               >
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -130,7 +297,7 @@
               <button
                 id="regen-btn-{{ section.key }}"
                 onclick="handleRegenBtnClick('{{ session_id }}', '{{ section.key }}')"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors"
+                class="btn-regen-sm"
               >
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -141,22 +308,22 @@
             </div>
           </div>
 
-          <!-- Card body: all expanded during generation, first expanded on preview -->
+          <!-- Card body -->
           <div id="section-body-{{ section.key }}"{% if not generating and not loop.first %} class="hidden"{% endif %}>
 
-            <!-- Feedback panel (shown when Regenerate with AI is clicked) -->
-            <div id="feedback-panel-{{ section.key }}" class="hidden border-b border-indigo-100 bg-slate-50/70 px-6 py-3">
-              <label class="text-xs font-medium text-gray-500 block mb-1.5">Instructions <span class="font-normal text-gray-400">(optional)</span></label>
+            <!-- Feedback panel -->
+            <div id="feedback-panel-{{ section.key }}" class="feedback-panel hidden">
+              <label class="text-xs block mb-1.5" style="font-weight: 500; color: var(--color-text-muted);">Instructions <span style="font-weight: 400; color: var(--color-text-muted); opacity: 0.7;">(optional)</span></label>
               <textarea
                 id="feedback-input-{{ section.key }}"
-                class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white placeholder-gray-400"
+                class="feedback-textarea"
                 rows="2"
                 placeholder="e.g. Make it more concise, focus on error handling…"
               ></textarea>
               <div class="flex justify-end mt-2">
                 <button
                   onclick="confirmRegen('{{ session_id }}', '{{ section.key }}')"
-                  class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+                  class="btn-primary-sm"
                 >
                   <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -168,31 +335,31 @@
             </div>
 
             <!-- Unsaved indicator -->
-            <div id="unsaved-{{ section.key }}" class="hidden px-6 py-2 bg-amber-50 border-b border-amber-100">
-              <p class="text-xs text-amber-700 font-medium">Unsaved changes — click Save to keep your edits</p>
+            <div id="unsaved-{{ section.key }}" class="unsaved-bar hidden">
+              <p>Unsaved changes — click Save to keep your edits</p>
             </div>
 
-            <!-- Pending skeleton (only present when generating, removed on section-complete) -->
+            <!-- Pending skeleton (only during generation) -->
             {% if generating %}
             <div id="skeleton-{{ section.key }}" class="px-6 py-5">
-              <div class="animate-pulse space-y-2.5">
-                <div class="h-3 bg-gray-200 rounded w-3/4"></div>
-                <div class="h-3 bg-gray-200 rounded w-full"></div>
-                <div class="h-3 bg-gray-200 rounded w-5/6"></div>
-                <div class="h-3 bg-gray-200 rounded w-2/3"></div>
-                <div class="h-3 bg-gray-200 rounded w-4/5"></div>
-                <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+              <div class="space-y-2.5" style="animation: pulse 2s cubic-bezier(.4,0,.6,1) infinite;">
+                <div class="skeleton-bar" style="width: 75%;"></div>
+                <div class="skeleton-bar" style="width: 100%;"></div>
+                <div class="skeleton-bar" style="width: 83%;"></div>
+                <div class="skeleton-bar" style="width: 67%;"></div>
+                <div class="skeleton-bar" style="width: 80%;"></div>
+                <div class="skeleton-bar" style="width: 50%;"></div>
               </div>
             </div>
             {% endif %}
 
             <!-- Rendered markdown -->
-            <div id="rendered-{{ section.key }}" class="prose max-w-none px-6 py-5 text-gray-800 text-sm{% if generating %} hidden{% endif %}"></div>
+            <div id="rendered-{{ section.key }}" class="prose max-w-none px-6 py-5{% if generating %} hidden{% endif %}"></div>
 
-            <!-- Editor textarea (hidden by default) -->
+            <!-- Editor textarea -->
             <textarea
               id="editor-{{ section.key }}"
-              class="hidden w-full px-6 py-4 font-mono text-sm text-gray-800 bg-gray-50 border-t border-gray-200 resize-y focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400"
+              class="editor-textarea hidden"
               rows="20"
               oninput="showUnsaved('{{ section.key }}')"
             >{{ section.content }}</textarea>
@@ -203,22 +370,28 @@
       </div>
     </main>
 
-    <!-- Sticky TOC sidebar — always present -->
+    <!-- Sticky TOC sidebar -->
     <aside class="hidden md:block w-52 flex-shrink-0">
       <div class="sticky top-20">
-        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Contents</p>
-        <nav class="space-y-1">
-          {% for section in sections %}
-          <a
-            href="#{{ section.id }}"
-            class="block px-3 py-1.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
-          >{{ section.title }}</a>
-          {% endfor %}
-        </nav>
+        <div class="toc-sidebar">
+          <p class="text-xs uppercase tracking-wider mb-3" style="font-weight: 500; color: var(--color-text-muted);">Contents</p>
+          <nav class="space-y-1">
+            {% for section in sections %}
+            <a href="#{{ section.id }}" class="toc-link">{{ section.title }}</a>
+            {% endfor %}
+          </nav>
+        </div>
       </div>
     </aside>
 
   </div>
+
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+  </style>
 
   <script>
     const SESSION_ID = "{{ session_id }}";
@@ -232,10 +405,9 @@
       deployment: "Deployment",
     };
 
-    // Mutable flag — set to false when generation completes
     let isGenerating = {{ 'true' if generating else 'false' }};
 
-    // ── On-load: render markdown from textarea (non-generating mode only) ──
+    // ── On-load: render markdown (non-generating mode) ──
     {% if not generating %}
     {% for section in sections %}
     (function () {
@@ -246,7 +418,7 @@
     {% endfor %}
     {% endif %}
 
-    // ── Header click — gated by isGenerating ──
+    // ── Header click ──
     function handleHeaderClick(key) {
       if (isGenerating) return;
       toggleSection(key);
@@ -302,45 +474,24 @@
     }
 
     // ── Regenerate ──
-    const REGEN_CLASS_IDLE   = "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors";
-    const REGEN_CLASS_CANCEL = "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors";
-
-    const REGEN_BTN_IDLE = `
-      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-      </svg>
-      Regenerate with AI
-    `;
-    const REGEN_BTN_CANCEL = `
-      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-      Cancel
-    `;
+    const REGEN_ICON_REFRESH = `<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>`;
+    const REGEN_ICON_X = `<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
 
     const _regenPanelOpen = {};
 
     function handleRegenBtnClick(sessionId, key) {
-      if (_regenPanelOpen[key]) {
-        cancelRegen(key);
-      } else {
-        openRegenPanel(key);
-      }
+      if (_regenPanelOpen[key]) cancelRegen(key); else openRegenPanel(key);
     }
 
     function openRegenPanel(key) {
       const body = document.getElementById("section-body-" + key);
       if (body.classList.contains("hidden")) toggleSection(key);
-
       _regenPanelOpen[key] = true;
       document.getElementById("feedback-panel-" + key).classList.remove("hidden");
       document.getElementById("feedback-input-" + key).focus();
-
       const btn = document.getElementById("regen-btn-" + key);
-      btn.className = REGEN_CLASS_CANCEL;
-      btn.innerHTML = REGEN_BTN_CANCEL;
-
+      btn.className = "btn-regen-cancel";
+      btn.innerHTML = REGEN_ICON_X + " Cancel";
       document.getElementById("edit-btn-" + key).classList.add("hidden");
     }
 
@@ -348,11 +499,9 @@
       _regenPanelOpen[key] = false;
       document.getElementById("feedback-panel-" + key).classList.add("hidden");
       document.getElementById("feedback-input-" + key).value = "";
-
       const btn = document.getElementById("regen-btn-" + key);
-      btn.className = REGEN_CLASS_IDLE;
-      btn.innerHTML = REGEN_BTN_IDLE;
-
+      btn.className = "btn-regen-sm";
+      btn.innerHTML = REGEN_ICON_REFRESH + " Regenerate with AI";
       document.getElementById("edit-btn-" + key).classList.remove("hidden");
     }
 
@@ -371,14 +520,8 @@
 
       const btn = document.getElementById("regen-btn-" + key);
       btn.disabled = true;
-      btn.className = REGEN_CLASS_IDLE;
-      btn.innerHTML = `
-        <svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-        </svg>
-        Regenerating…
-      `;
+      btn.className = "btn-regen-sm";
+      btn.innerHTML = `<svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Regenerating…`;
 
       const rendered = document.getElementById("rendered-" + key);
       rendered.classList.remove("hidden");
@@ -386,7 +529,7 @@
       document.getElementById("edit-btn-" + key).classList.remove("hidden");
       document.getElementById("save-btn-" + key).classList.add("hidden");
       document.getElementById("unsaved-" + key).classList.add("hidden");
-      rendered.classList.add("opacity-30");
+      rendered.style.opacity = "0.35";
 
       let accumulated = "";
       let renderTimer = null;
@@ -397,27 +540,25 @@
       es.addEventListener("message", (e) => {
         accumulated += JSON.parse(e.data);
         clearTimeout(renderTimer);
-        renderTimer = setTimeout(() => {
-          rendered.innerHTML = marked.parse(accumulated);
-        }, 400);
+        renderTimer = setTimeout(() => { rendered.innerHTML = marked.parse(accumulated); }, 400);
       });
       es.addEventListener("done", () => {
         es.close();
         clearTimeout(renderTimer);
         rendered.innerHTML = marked.parse(accumulated);
-        rendered.classList.remove("opacity-30");
+        rendered.style.opacity = "";
         document.getElementById("editor-" + key).value = accumulated;
         btn.disabled = false;
-        btn.className = REGEN_CLASS_IDLE;
-        btn.innerHTML = REGEN_BTN_IDLE;
+        btn.className = "btn-regen-sm";
+        btn.innerHTML = REGEN_ICON_REFRESH + " Regenerate with AI";
       });
       es.onerror = () => {
         es.close();
         clearTimeout(renderTimer);
-        rendered.classList.remove("opacity-30");
+        rendered.style.opacity = "";
         btn.disabled = false;
-        btn.className = REGEN_CLASS_IDLE;
-        btn.innerHTML = REGEN_BTN_IDLE;
+        btn.className = "btn-regen-sm";
+        btn.innerHTML = REGEN_ICON_REFRESH + " Regenerate with AI";
       };
     }
 
@@ -438,51 +579,29 @@
       function setSectionActive(key) {
         const badge = document.getElementById("gen-badge-" + key);
         if (badge) {
-          badge.innerHTML = `
-            <svg class="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-            </svg>
-            Generating…
-          `;
-          badge.className = "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700";
+          badge.innerHTML = `<svg class="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Generating…`;
+          badge.style.background = "rgba(228,217,255,0.12)";
+          badge.style.color = "var(--color-primary)";
         }
-        // Highlight active card
         const card = document.getElementById("section-" + key.replace(/_/g, "-"));
         if (card) {
-          card.classList.add("border-indigo-300", "shadow-md");
-          card.classList.remove("border-gray-200", "shadow-sm");
+          card.classList.add("active");
           card.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
-        // Shift skeleton to indigo pulse
         const skeleton = document.getElementById("skeleton-" + key);
-        if (skeleton) {
-          skeleton.querySelectorAll(".bg-gray-200").forEach(d => {
-            d.classList.remove("bg-gray-200");
-            d.classList.add("bg-indigo-200");
-          });
-        }
+        if (skeleton) skeleton.querySelectorAll(".skeleton-bar").forEach(d => d.classList.add("active"));
       }
 
       function setSectionDone(key, content) {
-        // Update badge
         const badge = document.getElementById("gen-badge-" + key);
         if (badge) {
-          badge.innerHTML = `
-            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-            </svg>
-            Done
-          `;
-          badge.className = "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700";
+          badge.innerHTML = `<svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Done`;
+          badge.style.background = "rgba(200,255,190,0.12)";
+          badge.style.color = "var(--color-accent)";
         }
-        // Reset card border
         const card = document.getElementById("section-" + key.replace(/_/g, "-"));
-        if (card) {
-          card.classList.remove("border-indigo-300", "shadow-md");
-          card.classList.add("border-gray-200", "shadow-sm");
-        }
-        // Remove skeleton, show rendered content
+        if (card) card.classList.remove("active");
+
         const skeleton = document.getElementById("skeleton-" + key);
         if (skeleton) skeleton.remove();
 
@@ -491,7 +610,6 @@
           rendered.innerHTML = marked.parse(content);
           rendered.classList.remove("hidden");
         }
-        // Populate textarea so editing works after generation
         const editor = document.getElementById("editor-" + key);
         if (editor) editor.value = content;
 
@@ -502,28 +620,25 @@
       function revealAll() {
         isGenerating = false;
 
-        // Enable download button
         const downloadBtn = document.getElementById("download-btn");
         if (downloadBtn) {
-          downloadBtn.classList.remove("bg-gray-100", "text-gray-400", "pointer-events-none");
-          downloadBtn.classList.add("bg-indigo-600", "text-white", "hover:bg-indigo-700");
+          downloadBtn.classList.remove("download-disabled");
+          downloadBtn.style.background = "var(--color-primary)";
+          downloadBtn.style.color = "var(--color-base)";
+          downloadBtn.style.fontWeight = "500";
           downloadBtn.removeAttribute("aria-disabled");
           downloadBtn.removeAttribute("tabindex");
         }
 
-        // Update header title
         const title = document.getElementById("page-title");
         if (title) title.textContent = "Documentation Preview";
 
-        // Hide progress bar and status line
         if (progressWrap) progressWrap.classList.add("hidden");
         if (statusWrap) statusWrap.classList.add("hidden");
 
-        // Show subtitle
         const subtitle = document.getElementById("preview-subtitle");
         if (subtitle) subtitle.classList.remove("hidden");
 
-        // Swap badges → action buttons on every section
         document.querySelectorAll("[id^='gen-badge-']").forEach(el => el.classList.add("hidden"));
         document.querySelectorAll("[id^='action-btns-']").forEach(el => el.classList.remove("hidden"));
       }
