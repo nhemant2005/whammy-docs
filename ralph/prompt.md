@@ -55,6 +55,10 @@ If the task is complete, move the issue file to `issues/done/`.
 
 If the task is not complete, add a note to the issue file with what was done.
 
+# SHORT SUMMARY
+
+After completing all the above tasks, generate a small summary of the changes implemented, how they will affect the project and how the user can test the changes.
+
 # FINAL RULES
 
 ONLY WORK ON A SINGLE TASK.
