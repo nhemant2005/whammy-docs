@@ -187,9 +187,24 @@
       color: var(--color-text-muted) !important;
       pointer-events: none;
     }
+
+    /* Gradient layer — Tea Green → Periwinkle, fills from bottom in sync with progress */
+    #gradient-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: linear-gradient(to top, var(--color-accent), var(--color-primary));
+      clip-path: inset(calc(100% - var(--gradient-progress, 0%)) 0 0 0);
+      transition: clip-path 600ms ease-out;
+      opacity: 0.18;
+    }
   </style>
 </head>
 <body class="min-h-screen" style="position: relative;">
+
+  <!-- Gradient layer: Tea Green → Periwinkle, reveals bottom-up with generation progress -->
+  <div id="gradient-layer"></div>
 
   <!-- Sticky header -->
   <header class="sticky top-0 z-10 backdrop-blur-sm" style="background: rgba(41,47,54,0.92); border-bottom: 1px solid var(--color-border);">
@@ -407,6 +422,13 @@
 
     let isGenerating = {{ 'true' if generating else 'false' }};
 
+    // ── Gradient progress initialisation ──
+    {% if not generating %}
+    document.documentElement.style.setProperty('--gradient-progress', '100%');
+    {% else %}
+    document.documentElement.style.setProperty('--gradient-progress', '0%');
+    {% endif %}
+
     // ── On-load: render markdown (non-generating mode) ──
     {% if not generating %}
     {% for section in sections %}
@@ -614,7 +636,9 @@
         if (editor) editor.value = content;
 
         completedCount++;
-        if (progressBar) progressBar.style.width = `${Math.round((completedCount / KNOWN_TOTAL) * 100)}%`;
+        const pct = Math.round((completedCount / KNOWN_TOTAL) * 100);
+        if (progressBar) progressBar.style.width = `${pct}%`;
+        document.documentElement.style.setProperty('--gradient-progress', `${pct}%`);
       }
 
       function revealAll() {
@@ -667,6 +691,7 @@
       es.addEventListener("done", () => {
         es.close();
         if (progressBar) progressBar.style.width = "100%";
+        document.documentElement.style.setProperty('--gradient-progress', '100%');
         setTimeout(revealAll, 400);
       });
 
