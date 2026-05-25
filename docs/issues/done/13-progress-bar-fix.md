@@ -18,15 +18,12 @@ No backend changes required.
 
 ## Acceptance criteria
 
-- [x] Comprehensive mode: bar reaches ~20% after section 1 completes, ~40% after section 2, ~60% after section 3, ~80% after section 4, 100% on `done`
-- [x] Quick mode: bar reaches ~50% after section 1 completes, 100% on `done`
-- [x] Bar reaches 100% when the `done` SSE event fires (existing behaviour preserved)
-- [x] No backend routes or `generator.py` changes
-- [x] All 74 existing tests still pass
+- [ ] Comprehensive mode: bar reaches ~20% after section 1 completes, ~40% after section 2, ~60% after section 3, ~80% after section 4, 100% on `done`
+- [ ] Quick mode: bar reaches ~50% after section 1 completes, 100% on `done`
+- [ ] Bar reaches 100% when the `done` SSE event fires (existing behaviour preserved)
+- [ ] No backend routes or `generator.py` changes
+- [ ] All 74 existing tests still pass
 
-## Work notes
+## Blocked by
 
-- `main.py` `/generate/{session_id}`: reads `session.json` and passes `mode` to template
-- `generate.html`: replaced dynamic `totalSections` counter with `KNOWN_TOTAL` (2 for quick, 5 for comprehensive)
-- Status text now shows "section N of M" using `completedCount + 1` and `KNOWN_TOTAL`
-- Commit: fix(generate): progress bar uses known section total per mode
+None — can start immediately.

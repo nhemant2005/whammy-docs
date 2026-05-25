@@ -58,6 +58,7 @@
 
     let currentSection = null;
     let sectionBuffers = {};
+    let sectionTimers = {};
     let completedCount = 0;
 
     const container = document.getElementById("sections-container");
@@ -140,11 +141,14 @@
     es.addEventListener("message", (e) => {
       if (!currentSection) return;
       sectionBuffers[currentSection] += e.data;
-      renderSection(currentSection);
+      const key = currentSection;
+      clearTimeout(sectionTimers[key]);
+      sectionTimers[key] = setTimeout(() => renderSection(key), 400);
     });
 
     es.addEventListener("section-complete", (e) => {
       const key = e.data.trim();
+      clearTimeout(sectionTimers[key]);
       renderSection(key);
       markSectionDone(key);
     });

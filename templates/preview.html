@@ -180,14 +180,21 @@
       document.getElementById("unsaved-" + key).classList.add("hidden");
 
       let accumulated = "";
+      let renderTimer = null;
       const es = new EventSource(`/regenerate/${sessionId}/${key}`);
       es.addEventListener("message", (e) => {
         accumulated += e.data;
-        rendered.innerHTML = marked.parse(accumulated);
-        document.getElementById("editor-" + key).value = accumulated;
+        clearTimeout(renderTimer);
+        renderTimer = setTimeout(() => {
+          rendered.innerHTML = marked.parse(accumulated);
+          document.getElementById("editor-" + key).value = accumulated;
+        }, 400);
       });
       es.addEventListener("done", () => {
         es.close();
+        clearTimeout(renderTimer);
+        rendered.innerHTML = marked.parse(accumulated);
+        document.getElementById("editor-" + key).value = accumulated;
         btn.disabled = false;
         btn.innerHTML = REGEN_BTN_IDLE;
       });
