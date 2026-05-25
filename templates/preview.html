@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
+    html { scroll-behavior: smooth; }
     .prose h1 { font-size: 1.5rem; font-weight: 700; margin: 1rem 0 0.5rem; }
     .prose h2 { font-size: 1.25rem; font-weight: 600; margin: 0.75rem 0 0.5rem; }
     .prose h3 { font-size: 1.1rem; font-weight: 600; margin: 0.5rem 0 0.25rem; }
@@ -23,7 +24,7 @@
 
   <!-- Sticky header -->
   <header class="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm">
-    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-4">
         <a href="/" class="text-sm text-indigo-600 hover:underline">&larr; Start over</a>
         <h1 class="text-lg font-bold text-gray-900">Documentation Preview</h1>
@@ -41,73 +42,113 @@
     </div>
   </header>
 
-  <div class="max-w-4xl mx-auto px-4 py-8">
+  <div class="max-w-6xl mx-auto px-4 py-8 flex gap-8">
 
-    <p class="text-gray-500 mb-6 text-sm">Review, edit, and download your generated docs.</p>
+    <!-- Main content -->
+    <main class="flex-1 min-w-0">
+      <p class="text-gray-500 mb-6 text-sm">Review, edit, and download your generated docs.</p>
 
-    <!-- Section cards -->
-    <div class="space-y-6">
-      {% for section in sections %}
-      <div id="{{ section.id }}" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <!-- Section cards -->
+      <div class="space-y-6">
+        {% for section in sections %}
+        <div id="{{ section.id }}" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
 
-        <!-- Card header -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-          <h2 class="text-base font-semibold text-gray-900">{{ section.title }}</h2>
-          <div class="flex items-center gap-2">
-            <button
-              id="edit-btn-{{ section.key }}"
-              onclick="startEdit('{{ section.key }}')"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          <!-- Card header — clickable toggle -->
+          <div
+            class="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50 cursor-pointer select-none"
+            onclick="toggleSection('{{ section.key }}')"
+          >
+            <div class="flex items-center gap-3 min-w-0">
+              <!-- Chevron indicator -->
+              <svg
+                id="chevron-{{ section.key }}"
+                class="h-4 w-4 text-gray-400 transition-transform duration-200 flex-shrink-0{% if not loop.first %} -rotate-90{% endif %}"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
-              Edit
-            </button>
-            <button
-              id="save-btn-{{ section.key }}"
-              onclick="saveEdit('{{ session_id }}', '{{ section.key }}')"
-              class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              Save
-            </button>
-            <button
-              id="regen-btn-{{ section.key }}"
-              onclick="regenSection('{{ session_id }}', '{{ section.key }}')"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors"
-            >
-              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Regenerate with AI
-            </button>
+              <h2 class="text-base font-semibold text-gray-900">{{ section.title }}</h2>
+              {% if not loop.first %}
+              <span id="expand-hint-{{ section.key }}" class="text-xs text-gray-400 italic">Click to expand</span>
+              {% endif %}
+            </div>
+            <!-- Buttons — stopPropagation so clicks don't toggle the card -->
+            <div class="flex items-center gap-2 flex-shrink-0" onclick="event.stopPropagation()">
+              <button
+                id="edit-btn-{{ section.key }}"
+                onclick="startEdit('{{ section.key }}')"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit
+              </button>
+              <button
+                id="save-btn-{{ section.key }}"
+                onclick="saveEdit('{{ session_id }}', '{{ section.key }}')"
+                class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Save
+              </button>
+              <button
+                id="regen-btn-{{ section.key }}"
+                onclick="regenSection('{{ session_id }}', '{{ section.key }}')"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors"
+              >
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Regenerate with AI
+              </button>
+            </div>
           </div>
+
+          <!-- Collapsible body (first section expanded, rest collapsed) -->
+          <div id="section-body-{{ section.key }}"{% if not loop.first %} class="hidden"{% endif %}>
+
+            <!-- Unsaved indicator -->
+            <div id="unsaved-{{ section.key }}" class="hidden px-6 py-2 bg-amber-50 border-b border-amber-100">
+              <p class="text-xs text-amber-700 font-medium">Unsaved changes — click Save to keep your edits</p>
+            </div>
+
+            <!-- Rendered preview -->
+            <div id="rendered-{{ section.key }}" class="prose max-w-none px-6 py-5 text-gray-800 text-sm"></div>
+
+            <!-- Editor (hidden by default) -->
+            <textarea
+              id="editor-{{ section.key }}"
+              class="hidden w-full px-6 py-4 font-mono text-sm text-gray-800 bg-gray-50 border-t border-gray-200 resize-y focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400"
+              rows="20"
+              oninput="showUnsaved('{{ section.key }}')"
+            >{{ section.content }}</textarea>
+
+          </div>
+
         </div>
-
-        <!-- Unsaved indicator (hidden by default) -->
-        <div id="unsaved-{{ section.key }}" class="hidden px-6 py-2 bg-amber-50 border-b border-amber-100">
-          <p class="text-xs text-amber-700 font-medium">Unsaved changes — click Save to keep your edits</p>
-        </div>
-
-        <!-- Rendered preview -->
-        <div id="rendered-{{ section.key }}" class="prose max-w-none px-6 py-5 text-gray-800 text-sm"></div>
-
-        <!-- Editor (hidden by default) -->
-        <textarea
-          id="editor-{{ section.key }}"
-          class="hidden w-full px-6 py-4 font-mono text-sm text-gray-800 bg-gray-50 border-t border-gray-200 resize-y focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400"
-          rows="20"
-          oninput="showUnsaved('{{ section.key }}')"
-        >{{ section.content }}</textarea>
-
+        {% endfor %}
       </div>
-      {% endfor %}
-    </div>
+    </main>
+
+    <!-- Sticky TOC sidebar — hidden on mobile -->
+    <aside class="hidden md:block w-52 flex-shrink-0">
+      <div class="sticky top-20">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Contents</p>
+        <nav class="space-y-1">
+          {% for section in sections %}
+          <a
+            href="#{{ section.id }}"
+            class="block px-3 py-1.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
+          >{{ section.title }}</a>
+          {% endfor %}
+        </nav>
+      </div>
+    </aside>
 
   </div>
 
@@ -123,7 +164,28 @@
     })();
     {% endfor %}
 
+    function toggleSection(key) {
+      const body = document.getElementById("section-body-" + key);
+      const chevron = document.getElementById("chevron-" + key);
+      const hint = document.getElementById("expand-hint-" + key);
+
+      const collapsed = body.classList.contains("hidden");
+      if (collapsed) {
+        body.classList.remove("hidden");
+        chevron.classList.remove("-rotate-90");
+        if (hint) hint.classList.add("hidden");
+      } else {
+        body.classList.add("hidden");
+        chevron.classList.add("-rotate-90");
+        if (hint) hint.classList.remove("hidden");
+      }
+    }
+
     function startEdit(key) {
+      // Auto-expand if section is collapsed
+      const body = document.getElementById("section-body-" + key);
+      if (body.classList.contains("hidden")) toggleSection(key);
+
       document.getElementById("rendered-" + key).classList.add("hidden");
       document.getElementById("editor-" + key).classList.remove("hidden");
       document.getElementById("edit-btn-" + key).classList.add("hidden");
@@ -162,6 +224,10 @@
     `;
 
     function regenSection(sessionId, key) {
+      // Auto-expand if section is collapsed
+      const body = document.getElementById("section-body-" + key);
+      if (body.classList.contains("hidden")) toggleSection(key);
+
       const btn = document.getElementById("regen-btn-" + key);
       btn.disabled = true;
       btn.innerHTML = `
@@ -179,6 +245,8 @@
       document.getElementById("save-btn-" + key).classList.add("hidden");
       document.getElementById("unsaved-" + key).classList.add("hidden");
 
+      rendered.classList.add("opacity-30");
+
       let accumulated = "";
       let renderTimer = null;
       const es = new EventSource(`/regenerate/${sessionId}/${key}`);
@@ -187,19 +255,20 @@
         clearTimeout(renderTimer);
         renderTimer = setTimeout(() => {
           rendered.innerHTML = marked.parse(accumulated);
-          document.getElementById("editor-" + key).value = accumulated;
         }, 400);
       });
       es.addEventListener("done", () => {
         es.close();
         clearTimeout(renderTimer);
         rendered.innerHTML = marked.parse(accumulated);
+        rendered.classList.remove("opacity-30");
         document.getElementById("editor-" + key).value = accumulated;
         btn.disabled = false;
         btn.innerHTML = REGEN_BTN_IDLE;
       });
       es.onerror = () => {
         es.close();
+        clearTimeout(renderTimer);
         btn.disabled = false;
         btn.innerHTML = REGEN_BTN_IDLE;
       };
