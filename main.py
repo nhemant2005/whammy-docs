@@ -90,6 +90,33 @@ async def upload(
     return RedirectResponse(url=f"/generate/{session_id}", status_code=303)
 
 
+@app.post("/upload-sample")
+async def upload_sample():
+    sample_dir = Path(__file__).parent / "samples" / "todo-app"
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for f in sample_dir.rglob("*"):
+            if f.is_file():
+                zf.write(f, f.relative_to(sample_dir).as_posix())
+    buf.seek(0)
+
+    session_id = str(uuid.uuid4())
+    session_dir = _tmp_dir() / f"whammy-{session_id}"
+    session_dir.mkdir(parents=True, exist_ok=True)
+
+    with zipfile.ZipFile(buf) as zf:
+        zf.extractall(session_dir)
+
+    (session_dir / "session.json").write_text(
+        json.dumps({"session_id": session_id, "mode": "comprehensive", "project_name": "todo-app"})
+    )
+
+    scan(session_dir)
+
+    return RedirectResponse(url=f"/generate/{session_id}", status_code=303)
+
+
 @app.get("/generate/{session_id}", response_class=HTMLResponse)
 async def generate_page(request: Request, session_id: str):
     session_dir = _tmp_dir() / f"whammy-{session_id}"
