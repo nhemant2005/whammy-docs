@@ -69,6 +69,20 @@ Then open [http://localhost:8000](http://localhost:8000).
 
 ---
 
+## Production VPS Deployment
+
+For hosting WhammyDocs publicly and securely on a Linux VPS (e.g., Ubuntu/Debian), we provide robust automated deployment assets under the `deploy/` directory:
+
+* **Automated Installation**: Run `sudo bash deploy/setup-vps.sh` on your VPS to automatically install Python system packages, establish a virtual environment, configure reverse proxies, and handle daemon settings.
+* **Unprivileged Sandboxing**: The service is sandboxed to run under a restricted, unprivileged system user to ensure host security.
+* **Nginx Reverse Proxy**: A ready-to-use Nginx block pre-configured for 50MB file uploads, optimized static caching, and buffering-free SSE streaming.
+* **Free Dynamic DNS**: Integrates with DuckDNS via a lightweight cron script to keep your domain mapped to your VPS IP dynamically.
+* **Automatic SSL**: Completely compatible with Let's Encrypt Certbot for fast, free HTTPS certificates.
+
+For complete, step-by-step setup instructions, please read our [VPS Deployment Guide](docs/deployment-vps.md).
+
+---
+
 ## Project structure
 
 ```
@@ -79,6 +93,11 @@ hackathon-ai-builders/
 ├── requirements.txt
 ├── pytest.ini
 ├── .env                      # DEEPSEEK_API_KEY (never committed)
+│
+├── deploy/
+│   ├── nginx.conf            # Nginx reverse proxy configuration template
+│   ├── setup-vps.sh          # Automated interactive bash installer
+│   └── whammy-docs.service   # systemd process control service template
 │
 ├── templates/
 │   ├── upload.html           # Upload page (drag-drop, mode select)
