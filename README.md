@@ -1,6 +1,6 @@
 # WhammyDocs
 
-AI-powered documentation generator. Upload your project as a `.zip`, get a complete MkDocs documentation site — README, API reference, architecture overview, getting started guide, and deployment docs — streamed token-by-token in real time, then previewed, edited, and downloaded.
+AI-powered documentation generator. Upload your project as a `.zip`, get a complete MkDocs documentation site — README, API reference, architecture overview, getting started guide, and deployment docs — streamed token-by-token in real time, then previewed, edited, and downloaded. Dark-mode UI with Jet Black / Periwinkle / Tea Green palette and Unageo typeface.
 
 ---
 
@@ -32,6 +32,7 @@ python -m http.server 8080
 | Streaming | Server-Sent Events (SSE) via `httpx` async |
 | Docs output | MkDocs + Material theme |
 | Markdown preview | `marked.js` (CDN) |
+| UI theme | Custom dark-mode — Jet Black, Periwinkle, Tea Green, Unageo typeface |
 
 ---
 
@@ -84,7 +85,9 @@ hackathon-ai-builders/
 │   ├── generate.html         # Real-time SSE streaming progress
 │   └── preview.html          # Preview + edit + download
 │
-├── static/                   # Static assets
+├── static/
+│   ├── css/theme.css         # Design tokens + Unageo @font-face
+│   └── unageo/               # Unageo font files (ttf + variable)
 ├── samples/
 │   └── todo-app/             # Bundled sample FastAPI project
 │
@@ -184,7 +187,7 @@ Large files are summarised before being sent to the LLM to stay within context l
 pytest
 ```
 
-74 tests across all modules. All passing.
+77 tests across all modules. All passing.
 
 ---
 
