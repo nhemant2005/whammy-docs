@@ -25,7 +25,7 @@ After extraction, walk the session directory and produce a `mapping.json` file t
 - [x] A FastAPI project correctly maps route files to API Reference
 
 ## Work done
-
+`
 **Files created/modified:**
 - `scanner.py` — `scan(session_dir) -> dict`: collects files, applies ignore list + UTF-8 filter, classifies into sections, writes `mapping.json`
 - `main.py` — `POST /upload` now calls `scan()` after extraction
