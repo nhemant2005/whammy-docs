@@ -1,6 +1,6 @@
 # Issue 9 — Sample project button
 
-**Label:** done  
+**Label:** ready-for-agent  
 **Blocked by:** #5  
 **User stories:** US 6, 7
 
@@ -16,7 +16,4 @@ Bundle a minimal FastAPI todo app (~8 files) under `samples/todo-app/` in the re
 
 ## Work notes
 
-- 8 files: `main.py`, `schemas.py`, `database.py`, `config.py`, `requirements.txt`, `README.md`, `.env.example`, `tests/test_todos.py`
-- `POST /upload-sample` in `main.py`: zips `samples/todo-app/` in-memory, creates session (mode=comprehensive, project_name=todo-app), extracts, runs `scan()`, redirects to `/generate/{id}`
-- Upload page button + hidden form were already wired in a previous issue
-- 5 tests added in `tests/test_sample_project.py`; 74 total tests passing
+Implemented in commit `0d15fe7`. `samples/todo-app/` (8 files), `POST /upload-sample` route in main.py, and 5 behavioral tests in `tests/test_sample_project.py`.
