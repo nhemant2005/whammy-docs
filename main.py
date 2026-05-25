@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 
 from scanner import scan
-from generator import stream_readme, stream_all_sections
+from generator import stream_readme, stream_all_sections, stream_one_section
 
 _QUICK_SECTION_KEYS = ["readme", "api_reference"]
 _COMPREHENSIVE_SECTION_KEYS = [
@@ -172,6 +172,26 @@ async def edit_section(body: _EditRequest):
     session_path.write_text(json.dumps(session), encoding="utf-8")
 
     return Response(status_code=200)
+
+
+@app.get("/regenerate/{session_id}/{section_key}")
+async def regenerate_section(session_id: str, section_key: str):
+    session_dir = _tmp_dir() / f"whammy-{session_id}"
+    if not session_dir.exists():
+        return HTMLResponse("Session not found", status_code=404)
+
+    async def event_generator():
+        async for event_type, data in stream_one_section(session_dir, section_key):
+            if event_type == "message":
+                yield f"data: {data}\n\n"
+            else:
+                yield f"event: {event_type}\ndata: {data}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/download/{session_id}")

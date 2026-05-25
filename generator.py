@@ -266,6 +266,60 @@ async def stream_all_sections(session_dir: Path) -> AsyncIterator[tuple[str, str
 
 
 # ---------------------------------------------------------------------------
+# Single-section regenerate (Issue 8)
+# ---------------------------------------------------------------------------
+
+
+async def stream_one_section(
+    session_dir: Path, section_key: str
+) -> AsyncIterator[tuple[str, str]]:
+    """
+    Yield (event_type, data) tuples for one doc section regeneration.
+
+    event_type values:
+      "message"  — a markdown token (unnamed SSE event)
+      "done"     — regeneration finished, file written, edited flag cleared
+      "gen-error" — DeepSeek failure
+    """
+    session_dir = Path(session_dir)
+    config = _SECTION_CONFIGS[section_key]
+
+    mapping = json.loads((session_dir / "mapping.json").read_text(encoding="utf-8"))
+    docs_dir = session_dir / "docs"
+    docs_dir.mkdir(exist_ok=True)
+
+    all_files: list[str] = []
+    for key in config["file_keys"]:
+        all_files.extend(mapping.get(key, []))
+    all_files = list(dict.fromkeys(all_files))
+
+    files_content = _read_files_with_skeleton(session_dir, all_files)
+    tree = mapping.get("architecture", "") if config["use_tree"] else ""
+    prompt = _build_prompt(files_content, tree)
+
+    generated: list[str] = []
+    try:
+        async for token in _stream_section(config["system"], prompt):
+            yield ("message", token)
+            generated.append(token)
+    except Exception as exc:
+        yield ("gen-error", str(exc))
+        return
+
+    content = "".join(generated)
+    (docs_dir / f"{section_key}.md").write_text(content, encoding="utf-8")
+
+    session_path = session_dir / "session.json"
+    session = json.loads(session_path.read_text(encoding="utf-8"))
+    edited = session.get("edited", {})
+    edited.pop(section_key, None)
+    session["edited"] = edited
+    session_path.write_text(json.dumps(session), encoding="utf-8")
+
+    yield ("done", "")
+
+
+# ---------------------------------------------------------------------------
 # Legacy — kept for backwards compat with Issue 4 tests
 # ---------------------------------------------------------------------------
 
