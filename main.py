@@ -10,6 +10,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request, UploadFile, File, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 
@@ -36,6 +37,7 @@ _MKDOCS_NAV_TITLES = {
 }
 
 app = FastAPI(title="WhammyDocs")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 _50MB = 50 * 1024 * 1024

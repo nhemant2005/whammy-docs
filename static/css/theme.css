@@ -1,0 +1,45 @@
+/* Lumina Docs design tokens — loaded by every template */
+
+@font-face {
+  font-family: 'Unageo';
+  src: url('/static/unageo/ttf/Unageo-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Unageo';
+  src: url('/static/unageo/ttf/Unageo-Regular-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Unageo';
+  src: url('/static/unageo/ttf/Unageo-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Unageo';
+  src: url('/static/unageo/ttf/Unageo-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+}
+
+:root {
+  --color-base:       #292F36;
+  --color-surface:    #363c45;
+  --color-border:     rgba(208, 196, 223, 0.25);
+  --color-primary:    #E4D9FF;
+  --color-accent:     #C8FFBE;
+  --color-text:       #F0EBF8;
+  --color-text-muted: #A89BBC;
+}
+
+body {
+  font-family: 'Unageo', sans-serif;
+  background-color: var(--color-base);
+  color: var(--color-text);
+}
