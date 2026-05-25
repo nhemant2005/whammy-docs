@@ -6,21 +6,97 @@
   <title>WhammyDocs — Generate Your Docs</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/static/css/theme.css" />
+  <style>
+    .upload-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+    }
+    .drop-zone {
+      border: 2px dashed var(--color-border);
+      border-radius: 8px;
+      background: var(--color-base);
+      transition: border-color 0.2s, background 0.2s;
+      cursor: pointer;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--color-primary);
+      background: rgba(228, 217, 255, 0.05);
+    }
+    .mode-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      background: var(--color-base);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .mode-label:hover {
+      border-color: var(--color-primary);
+      background: rgba(228, 217, 255, 0.05);
+    }
+    .mode-label:has(input:checked) {
+      border-color: var(--color-primary);
+      background: rgba(228, 217, 255, 0.08);
+    }
+    .btn-primary {
+      width: 100%;
+      padding: 0.75rem 1.5rem;
+      background: var(--color-primary);
+      color: var(--color-base);
+      font-weight: 500;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .error-banner {
+      background: rgba(220, 38, 38, 0.15);
+      border: 1px solid rgba(220, 38, 38, 0.4);
+      color: #fca5a5;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .gradient-seed {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40vh;
+      pointer-events: none;
+      z-index: -1;
+      background: radial-gradient(ellipse at bottom, rgba(200, 255, 190, 0.25), transparent 70%);
+    }
+  </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-white flex items-center justify-center">
+<body class="min-h-screen flex items-center justify-center">
 
-  <div class="w-full max-w-xl mx-auto px-4 py-12">
+  <!-- Tea Green radial glow — introduces brand colour before generation -->
+  <div class="gradient-seed"></div>
+
+  <div class="w-full max-w-xl mx-auto px-4 py-12" style="position: relative; z-index: 1;">
 
     <!-- Hero -->
     <div class="text-center mb-10">
-      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 shadow-lg mb-4">
-        <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div class="inline-flex items-center justify-center w-16 h-16 mb-4" style="background: var(--color-primary); border-radius: 8px;">
+        <svg class="w-8 h-8" style="color: var(--color-base);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       </div>
-      <h1 class="text-4xl font-bold text-gray-900 tracking-tight">WhammyDocs</h1>
-      <p class="mt-3 text-gray-500 text-lg">Upload your project zip — get a complete docs site in seconds.</p>
+      <h1 class="text-4xl tracking-tight" style="font-weight: 800; color: var(--color-text);">WhammyDocs</h1>
+      <p class="mt-3 text-lg" style="color: var(--color-text-muted);">Upload your project zip — get a complete docs site in seconds.</p>
     </div>
 
     <!-- Upload form -->
@@ -29,22 +105,22 @@
       method="post"
       enctype="multipart/form-data"
       id="upload-form"
-      class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 space-y-6"
+      class="upload-card p-8 space-y-6"
     >
 
       <!-- Drag-drop zone -->
       <div
         id="drop-zone"
-        class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+        class="drop-zone p-10 text-center"
         onclick="document.getElementById('file-input').click()"
       >
-        <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="mx-auto h-12 w-12 mb-3" style="color: var(--color-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
             d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
         </svg>
-        <p class="text-gray-600 font-medium">Drop your <span class="text-indigo-600">.zip</span> here</p>
-        <p class="text-sm text-gray-400 mt-1">or click to browse — max 50 MB</p>
-        <p id="file-name" class="mt-3 text-sm font-semibold text-indigo-700 hidden"></p>
+        <p style="color: var(--color-text); font-weight: 500;">Drop your <span style="color: var(--color-primary);">.zip</span> here</p>
+        <p class="text-sm mt-1" style="color: var(--color-text-muted);">or click to browse — max 50 MB</p>
+        <p id="file-name" class="mt-3 text-sm hidden" style="font-weight: 500; color: var(--color-accent);"></p>
       </div>
 
       <input
@@ -58,41 +134,38 @@
 
       <!-- Inline error (server-side) -->
       {% if error %}
-      <p class="text-red-600 text-sm font-medium bg-red-50 border border-red-200 rounded-lg px-4 py-3">{{ error }}</p>
+      <p class="error-banner">{{ error }}</p>
       {% endif %}
 
       <!-- Inline error (client-side) -->
-      <p id="file-error" class="text-red-600 text-sm hidden"></p>
+      <p id="file-error" class="error-banner hidden"></p>
 
       <!-- Mode selector -->
       <fieldset class="space-y-3">
-        <legend class="text-sm font-semibold text-gray-700">Generation mode</legend>
+        <legend class="text-sm" style="font-weight: 500; color: var(--color-text-muted);">Generation mode</legend>
 
-        <label class="flex items-start gap-3 p-4 rounded-xl border border-gray-200 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
-          <input type="radio" name="mode" value="quick" class="mt-0.5 accent-indigo-600" />
+        <label class="mode-label">
+          <input type="radio" name="mode" value="quick" class="mt-0.5" style="accent-color: var(--color-primary);" />
           <span>
-            <span class="block font-medium text-gray-900">Quick</span>
-            <span class="block text-sm text-gray-500">README + API reference — ~10–20 seconds</span>
+            <span class="block" style="font-weight: 500; color: var(--color-text);">Quick</span>
+            <span class="block text-sm" style="color: var(--color-text-muted);">README + API reference — ~10–20 seconds</span>
           </span>
         </label>
 
-        <label class="flex items-start gap-3 p-4 rounded-xl border border-gray-200 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
-          <input type="radio" name="mode" value="comprehensive" checked class="mt-0.5 accent-indigo-600" />
+        <label class="mode-label">
+          <input type="radio" name="mode" value="comprehensive" checked class="mt-0.5" style="accent-color: var(--color-primary);" />
           <span>
             <span class="flex items-center gap-2">
-              <span class="block font-medium text-gray-900">Comprehensive</span>
-              <span class="text-xs font-medium px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Recommended</span>
+              <span class="block" style="font-weight: 500; color: var(--color-text);">Comprehensive</span>
+              <span class="text-xs px-1.5 py-0.5 rounded-full" style="font-weight: 500; background: rgba(228,217,255,0.15); color: var(--color-primary);">Recommended</span>
             </span>
-            <span class="block text-sm text-gray-500">README + API ref + architecture + guides — ~30–60 seconds</span>
+            <span class="block text-sm" style="color: var(--color-text-muted);">README + API ref + architecture + guides — ~30–60 seconds</span>
           </span>
         </label>
       </fieldset>
 
       <!-- Submit -->
-      <button
-        type="submit"
-        class="w-full py-3 px-6 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold rounded-xl transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-      >
+      <button type="submit" class="btn-primary">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
@@ -102,12 +175,14 @@
     </form>
 
     <!-- Sample project link -->
-    <p class="text-center mt-6 text-sm text-gray-500">
+    <p class="text-center mt-6 text-sm" style="color: var(--color-text-muted);">
       No project handy?
       <button
         type="button"
         onclick="document.getElementById('sample-form').submit()"
-        class="text-indigo-600 hover:underline font-medium"
+        style="color: var(--color-primary); font-weight: 500; background: none; border: none; cursor: pointer;"
+        onmouseover="this.style.textDecoration='underline'"
+        onmouseout="this.style.textDecoration='none'"
       >Try with a sample project</button>
     </p>
 
@@ -144,11 +219,11 @@
     }
 
     const zone = document.getElementById('drop-zone');
-    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('border-indigo-400', 'bg-indigo-50'); });
-    zone.addEventListener('dragleave', () => zone.classList.remove('border-indigo-400', 'bg-indigo-50'));
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
     zone.addEventListener('drop', e => {
       e.preventDefault();
-      zone.classList.remove('border-indigo-400', 'bg-indigo-50');
+      zone.classList.remove('drag-over');
       const input = document.getElementById('file-input');
       input.files = e.dataTransfer.files;
       showFileName(input);
